@@ -19,7 +19,7 @@ struct a_star_node {
 	int calculate_score(piece_data& destination);
 };
 
-class path_finder
+class pathfinder
 {
 public:
 	static void search(bitboard& board, piece_data& destination, move result[32], int& result_count);

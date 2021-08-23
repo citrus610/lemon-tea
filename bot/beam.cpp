@@ -155,6 +155,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 			if (is_first) { 
 				new_layer.pointer[new_layer.size - 1].org_index = reward_count;
 				reward[reward_count].score = new_layer.pointer[new_layer.size - 1].score;
+				reward[reward_count].placement = current_piece_pos[i];
 				++reward_count;
 			}
 			std::push_heap(new_layer.pointer, new_layer.pointer + new_layer.size);
@@ -183,6 +184,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 					if (is_first) {
 						new_layer.pointer[new_layer.size - 1].org_index = reward_count;
 						reward[reward_count].score = new_layer.pointer[new_layer.size - 1].score;
+						reward[reward_count].placement = hold_piece_pos[i];
 						++reward_count;
 					}
 					std::push_heap(new_layer.pointer, new_layer.pointer + new_layer.size);
@@ -210,6 +212,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 				if (is_first) {
 					new_layer.pointer[new_layer.size - 1].org_index = reward_count;
 					reward[reward_count].score = new_layer.pointer[new_layer.size - 1].score;
+					reward[reward_count].placement = hold_piece_pos[i];
 					++reward_count;
 				}
 				std::push_heap(new_layer.pointer, new_layer.pointer + new_layer.size);

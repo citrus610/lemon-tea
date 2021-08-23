@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <bitset>
 #include <bit>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #include <nmmintrin.h>
 #include <immintrin.h>

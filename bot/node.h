@@ -44,6 +44,7 @@ struct node {
 struct reward {
 	int visit = 0;
 	int score = 0;
+	piece_data placement;
 
 	bool operator < (const reward& other) {
 		if (visit == other.visit)
@@ -51,7 +52,6 @@ struct reward {
 		else
 			return visit < other.visit;
 	}
-
 	bool operator > (const reward& other) {
 		if (visit == other.visit)
 			return score > other.score;

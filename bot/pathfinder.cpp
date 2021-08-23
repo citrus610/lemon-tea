@@ -18,7 +18,7 @@ int a_star_node::calculate_score(piece_data& destination)
 	return score;
 }
 
-void path_finder::search(bitboard& board, piece_data& destination, move result[32], int& result_count)
+void pathfinder::search(bitboard& board, piece_data& destination, move result[32], int& result_count)
 {
 	// Sanity check
 	result_count = 0;
@@ -116,8 +116,8 @@ void path_finder::search(bitboard& board, piece_data& destination, move result[3
 				}
 
 				// Check if node had already been found
-				int in_open_list_index = path_finder::is_in_list(open_list, children[i]);
-				int in_closed_list_index = path_finder::is_in_list(close_list, children[i]);
+				int in_open_list_index = pathfinder::is_in_list(open_list, children[i]);
+				int in_closed_list_index = pathfinder::is_in_list(close_list, children[i]);
 
 				// If node haven't been found, push to open list
 				if (in_open_list_index == -1 && in_closed_list_index == -1) {
@@ -165,7 +165,7 @@ void path_finder::search(bitboard& board, piece_data& destination, move result[3
 * Check if a node is in a list
 * Return the index if found, else return -1
 */
-int path_finder::is_in_list(std::vector<a_star_node>& open_list, a_star_node& node)
+int pathfinder::is_in_list(std::vector<a_star_node>& open_list, a_star_node& node)
 {
 	for (size_t i = 0; i < open_list.size(); ++i) {
 		if (open_list[i].piece == node.piece) {
