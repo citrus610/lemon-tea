@@ -250,11 +250,11 @@ void weight::standard()
 	bumpiness_t = -13;
 	hole = -173;
 	hole_s = -3;
-	blocked_cell = -127;
+	blocked_cell = -86;
 	blocked_cell_s = -1;
 	block_above_hole = -17;
 	block_above_hole_s = -1;
-	well = 70;
+	well = 57;
 	well_index[0] = 20;
 	well_index[1] = 20;
 	well_index[2] = 24;

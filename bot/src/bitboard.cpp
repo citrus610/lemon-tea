@@ -116,19 +116,34 @@ bool bitboard::is_above_stack(piece_data& piece)
 bool bitboard::is_t_spin(piece_data& piece)
 {
 	if (piece.type == PIECE_T) {
+		//int corner_count = 
+		//	is_occupied(piece.x + 1, piece.y + 1) + 
+		//	is_occupied(piece.x + 1, piece.y - 1) + 
+		//	is_occupied(piece.x - 1, piece.y - 1) + 
+		//	is_occupied(piece.x - 1, piece.y + 1);
 		switch (piece.rotation)
 		{
 		case PIECE_UP:
-			return false;
+			return
+				is_occupied(piece.x + 1, piece.y + 1) &&
+				is_occupied(piece.x - 1, piece.y + 1) &&
+				(is_occupied(piece.x + 1, piece.y - 1) || is_occupied(piece.x - 1, piece.y - 1));
 			break;
 		case PIECE_RIGHT:
-			return is_occupied(piece.x + 1, piece.y + 1) && (is_occupied(piece.x - 1, piece.y) || is_occupied(piece.x - 1, piece.y + 1));
+			return
+				is_occupied(piece.x + 1, piece.y + 1) &&
+				(is_occupied(piece.x + 1, piece.y - 1) + is_occupied(piece.x - 1, piece.y - 1) + is_occupied(piece.x - 1, piece.y + 1) >= 2);
 			break;
 		case PIECE_DOWN:
-			return is_occupied(piece.x - 1, piece.y - 1) && is_occupied(piece.x + 1, piece.y - 1) && (is_occupied(piece.x - 1, piece.y + 1) || is_occupied(piece.x + 1, piece.y + 1));
+			return 
+				is_occupied(piece.x - 1, piece.y - 1) && 
+				is_occupied(piece.x + 1, piece.y - 1) && 
+				(is_occupied(piece.x - 1, piece.y + 1) || is_occupied(piece.x + 1, piece.y + 1));
 			break;
 		case PIECE_LEFT:
-			return is_occupied(piece.x - 1, piece.y + 1) && (is_occupied(piece.x + 1, piece.y) || is_occupied(piece.x + 1, piece.y + 1));
+			return
+				is_occupied(piece.x - 1, piece.y + 1) &&
+				(is_occupied(piece.x - 1, piece.y - 1) + is_occupied(piece.x + 1, piece.y - 1) + is_occupied(piece.x + 1, piece.y + 1) >= 2);
 			break;
 		default:
 			return false;

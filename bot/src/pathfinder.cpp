@@ -7,11 +7,11 @@ int a_star_node::calculate_score(piece_data& destination)
 {
 	int min_height = 100;
 	for (int i = 0; i < 4; ++i) {
-		min_height = std::min(min_height, 19 + piece_def_lut[destination.type][destination.rotation][i][1]);
+		min_height = std::min(min_height, destination.y + piece_def_lut[destination.type][destination.rotation][i][1]);
 	}
 	score = (piece.x - destination.x) * (piece.x - destination.x);
 	score += (piece.y - destination.y) * (piece.y - destination.y) * ((drop_count > 0) * 2 - 1);
-	if (drop_count == 0) score -= min_height * min_height * min_height;
+	if (drop_count == 0) score -= min_height * min_height;
 	if (piece.rotation - destination.rotation == 3)
 		score += 1;
 	else
