@@ -12,7 +12,7 @@ public:
 	static const int max_node_per_layer = 16000;
 	static const int max_reward = 256;
 	static const int prune = 2000;
-	static const int prune_percentage = 20;
+	static const int prune_percentage = 1;
 	const int width_s = 50;
 	const int width_l = 150;
 	bool is_forecast = true;

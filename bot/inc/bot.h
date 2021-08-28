@@ -16,7 +16,7 @@ struct bot_solution {
 	// Bot's placement and instrcution
 	bitboard board;
 	piece_data placement;
-	move move_list[32];
+	move_type move_list[32];
 	int move_list_count = 0;
 	bool is_hold = false;
 	int visit = 0;

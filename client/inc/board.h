@@ -46,7 +46,7 @@ public:
 	void update(double dt);
 	void render(sf::RenderTexture* _canvas);
 
-	const int preview = 6;
+	int preview = 17;
 	const double line_clear_time = 0.5, piece_place_time = 0.03;
 	const sf::Color color[8] = {
 		sf::Color(0, 255, 255, 255),

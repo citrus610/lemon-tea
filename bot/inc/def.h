@@ -53,7 +53,7 @@ enum lock_data : int
 	LOCK_PC
 };
 
-enum move : int
+enum move_type : int
 {
 	MOVE_RIGHT,
 	MOVE_LEFT,

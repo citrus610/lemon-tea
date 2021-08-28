@@ -7,11 +7,11 @@ int a_star_node::calculate_score(piece_data& destination)
 {
 	int min_height = 100;
 	for (int i = 0; i < 4; ++i) {
-		min_height = std::min(min_height, destination.y + piece_def_lut[destination.type][destination.rotation][i][1]);
+		min_height = std::min(min_height, piece.y + piece_def_lut[destination.type][destination.rotation][i][1]);
 	}
 	score = (piece.x - destination.x) * (piece.x - destination.x);
 	score += (piece.y - destination.y) * (piece.y - destination.y) * ((drop_count > 0) * 2 - 1);
-	if (drop_count == 0) score -= min_height * min_height;
+	if (drop_count == 0) score -= min_height * min_height * 25;
 	if (piece.rotation - destination.rotation == 3)
 		score += 1;
 	else
@@ -23,7 +23,7 @@ int a_star_node::calculate_score(piece_data& destination)
 	return score;
 }
 
-void pathfinder::search(bitboard& board, piece_data& destination, move result[32], int& result_count)
+void pathfinder::search(bitboard& board, piece_data& destination, move_type result[32], int& result_count)
 {
 	// Sanity check
 	result_count = 0;
@@ -95,7 +95,7 @@ void pathfinder::search(bitboard& board, piece_data& destination, move result[32
 			if (move_success) {
 
 				// Add move to children's path
-				children[i].path[children[i].path_count] = (move)i;
+				children[i].path[children[i].path_count] = (move_type)i;
 				++children[i].path_count;
 
 				// If have already soft dropped once, every moves after that should be checked if on floor and updated
@@ -115,7 +115,7 @@ void pathfinder::search(bitboard& board, piece_data& destination, move result[32
 
 				// If successor is the goal, stop search
 				if (children[i].piece == destination) {
-					memcpy(result, children[i].path, children[i].path_count * sizeof(move));
+					memcpy(result, children[i].path, children[i].path_count * sizeof(move_type));
 					result_count = children[i].path_count;
 					return;
 				}

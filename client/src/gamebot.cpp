@@ -2,6 +2,7 @@
 
 void gamebot::load()
 {
+	// Init game
 	srand((unsigned int)time(NULL));
 	this->img_counter.loadFromFile("res/graphic/counter.png");
 	this->sp_counter.setTexture(this->img_counter);
@@ -12,16 +13,16 @@ void gamebot::load()
 	this->gameover_timer = 1.0;
 	this->gameover_counter = 119;
 
-	/*
-	create_init_js();
+
+	// Init bot
+	create_json();
 	std::ifstream file;
 	file.open("init.json");
 	json js;
 	file >> js;
-	set_weight_js(this->w_1, js, 1);
-	set_weight_js(this->w_2, js, 2);
+	set_from_json(js, 1, w_1, bot_speed_percentage_1, bot_preview_1, bot_forecast_1);
+	set_from_json(js, 2, w_2, bot_speed_percentage_2, bot_preview_2, bot_forecast_2);
 	file.close();
-	*/
 
 	if (this->enable_bot_1) {
 		this->w_1.standard();
@@ -35,11 +36,7 @@ void gamebot::load()
 
 void gamebot::update(double dt)
 {
-	//this->gameover_timer += dt;
-	//if (this->gameover_timer > 0.016) {
-		this->gameover_counter++;
-	//	this->gameover_timer = 0.0;
-	//}
+	this->gameover_counter++;
 
 	if (this->gameover_counter == 120) {
 		this->start_game();
@@ -94,13 +91,13 @@ void gamebot::start_game()
 	this->board_2.init();
 
 	if (this->enable_bot_1) {
-		this->bot_1.start(5, this->w_1, true);
+		this->bot_1.start(bot_preview_1, this->w_1, bot_forecast_1);
 		bot_new_state data_1 = board_to_bot_data(this->board_1);
 		this->bot_1.set_state(data_1);
 	}
 
 	if (this->enable_bot_2) {
-		this->bot_2.start(5, this->w_2, true);
+		this->bot_2.start(bot_preview_2, this->w_2, bot_forecast_2);
 		bot_new_state data_2 = board_to_bot_data(this->board_2);
 		this->bot_2.set_state(data_2);
 	}
@@ -108,8 +105,8 @@ void gamebot::start_game()
 
 void gamebot::update_game(double dt)
 {
-	if (this->enable_bot_1) this->handle_bot_input(dt, 1, this->board_1, this->bot_1, this->bot_input_timer_1, this->elaspe_time_1, this->solution_1);
-	if (this->enable_bot_2) this->handle_bot_input(dt, 2, this->board_2, this->bot_2, this->bot_input_timer_2, this->elaspe_time_2, this->solution_2);
+	if (this->enable_bot_1) this->handle_bot_input(dt, 1, this->board_1, this->bot_1, this->bot_speed_percentage_1, this->bot_input_timer_1, this->elaspe_time_1, this->solution_1);
+	if (this->enable_bot_2) this->handle_bot_input(dt, 2, this->board_2, this->bot_2, this->bot_speed_percentage_2, this->bot_input_timer_2, this->elaspe_time_2, this->solution_2);
 
 	this->board_1.update(dt);
 	this->board_2.update(dt);
@@ -126,7 +123,7 @@ void gamebot::end_game()
 	if (this->enable_bot_2) this->bot_2.destroy();
 }
 
-void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, bot& _bot, double& bot_input_timer, double& bot_elaspe_time, std::vector<move>& solution_vec)
+void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, bot& _bot, int& bot_speed_percentage, double& bot_input_timer, double& bot_elaspe_time, std::vector<move_type>& solution_vec)
 {
 	bot_elaspe_time += dt;
 
@@ -267,14 +264,14 @@ void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, bot& _bo
 				solution_vec.erase(solution_vec.begin());
 				break;
 			case MOVE_LEFT:
-				if (bot_input_timer >= this->bot_input_delay) {
+				if (bot_input_timer >= this->bot_input_delay / (double)bot_speed_percentage * 100) {
 					_board.real_piece.try_left(_board.data);
 					bot_input_timer = 0.0;
 					solution_vec.erase(solution_vec.begin());
 				}
 				break;
 			case MOVE_RIGHT:
-				if (bot_input_timer >= this->bot_input_delay) {
+				if (bot_input_timer >= this->bot_input_delay / (double)bot_speed_percentage * 100) {
 					_board.real_piece.try_right(_board.data);
 					bot_input_timer = 0.0;
 					solution_vec.erase(solution_vec.begin());
@@ -282,7 +279,7 @@ void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, bot& _bo
 				break;
 			case MOVE_DOWN:
 				if (solution_vec.size() == (size_t)1) {
-					if (bot_input_timer >= this->bot_input_delay) {
+					if (bot_input_timer >= this->bot_input_delay / (double)bot_speed_percentage * 100) {
 						_board.real_piece.try_hard_drop(_board.data);
 						bot_input_timer = 0.0;
 						solution_vec.clear();

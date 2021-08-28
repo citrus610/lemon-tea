@@ -9,7 +9,7 @@ struct a_star_node {
 	int rotate_count = 0;
 	int drop_count = 0;
 	int move_after_drop_count = 0;
-	move path[32];
+	move_type path[32];
 	int path_count = 0;
 
 	bool operator < (const a_star_node& other) {
@@ -22,7 +22,7 @@ struct a_star_node {
 class pathfinder
 {
 public:
-	static void search(bitboard& board, piece_data& destination, move result[32], int& result_count);
+	static void search(bitboard& board, piece_data& destination, move_type result[32], int& result_count);
 	static int is_in_list(std::vector<a_star_node>& open_list, a_star_node& node);
 };
 
