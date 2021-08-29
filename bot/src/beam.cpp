@@ -149,7 +149,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 		for (int i = 0; i < current_piece_pos_count; ++i) {
 			node child;
 			child.attemp(parent, current_piece_pos[i], false, queue, queue_count);
-			child.score = evaluator.evaluate(child);
+			child.score = evaluator.evaluate(child, queue, queue_count);
 			if (new_layer.size == 0) { 
 				new_layer.pointer[0] = child;
 				++new_layer.size;
@@ -161,7 +161,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 		for (int i = 0; i < current_piece_pos_count; ++i) {
 			++new_layer.size;
 			new_layer.pointer[new_layer.size - 1].attemp(parent, current_piece_pos[i], false, queue, queue_count);
-			new_layer.pointer[new_layer.size - 1].score = evaluator.evaluate(new_layer.pointer[new_layer.size - 1]);
+			new_layer.pointer[new_layer.size - 1].score = evaluator.evaluate(new_layer.pointer[new_layer.size - 1], queue, queue_count);
 			if (is_first) { 
 				new_layer.pointer[new_layer.size - 1].org_index = reward_count;
 				reward[reward_count].score = new_layer.pointer[new_layer.size - 1].score;
@@ -182,7 +182,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 				for (int i = 0; i < hold_piece_pos_count; ++i) {
 					node child;
 					child.attemp(parent, hold_piece_pos[i], true, queue, queue_count);
-					child.score = evaluator.evaluate(child);
+					child.score = evaluator.evaluate(child, queue, queue_count);
 					if (new_layer.size == 0) {
 						new_layer.pointer[0] = child;
 						++new_layer.size;
@@ -194,7 +194,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 				for (int i = 0; i < hold_piece_pos_count; ++i) {
 					++new_layer.size;
 					new_layer.pointer[new_layer.size - 1].attemp(parent, hold_piece_pos[i], true, queue, queue_count);
-					new_layer.pointer[new_layer.size - 1].score = evaluator.evaluate(new_layer.pointer[new_layer.size - 1]);
+					new_layer.pointer[new_layer.size - 1].score = evaluator.evaluate(new_layer.pointer[new_layer.size - 1], queue, queue_count);
 					if (is_first) {
 						new_layer.pointer[new_layer.size - 1].org_index = reward_count;
 						reward[reward_count].score = new_layer.pointer[new_layer.size - 1].score;
@@ -214,7 +214,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 			for (int i = 0; i < hold_piece_pos_count; ++i) {
 				node child;
 				child.attemp(parent, hold_piece_pos[i], true, queue, queue_count);
-				child.score = evaluator.evaluate(child);
+				child.score = evaluator.evaluate(child, queue, queue_count);
 				if (new_layer.size == 0) {
 					new_layer.pointer[0] = child;
 					++new_layer.size;
@@ -226,7 +226,7 @@ void beam::expand_node(node& parent, vec<node>& new_layer, const bool& is_first,
 			for (int i = 0; i < hold_piece_pos_count; ++i) {
 				++new_layer.size;
 				new_layer.pointer[new_layer.size - 1].attemp(parent, hold_piece_pos[i], true, queue, queue_count);
-				new_layer.pointer[new_layer.size - 1].score = evaluator.evaluate(new_layer.pointer[new_layer.size - 1]);
+				new_layer.pointer[new_layer.size - 1].score = evaluator.evaluate(new_layer.pointer[new_layer.size - 1], queue, queue_count);
 				if (is_first) {
 					new_layer.pointer[new_layer.size - 1].org_index = reward_count;
 					reward[reward_count].score = new_layer.pointer[new_layer.size - 1].score;

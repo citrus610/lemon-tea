@@ -40,7 +40,7 @@ public:
 	weight heuristic;
 
 public:
-	int evaluate(node & node);
+	int evaluate(node& node, piece_type* queue, int& queue_count);
 
 public:
 	static int well(bitboard& board, int column_height[10], int& well_index);
@@ -49,6 +49,7 @@ public:
 	static int hole(bitboard& board, int column_height[10]);
 	static void block_above_hole(bitboard& board, int column_height[10], int result[2]);
 	static void structure(bitboard& board, int column_height[10], int result[2]);
+	static void quiescence(bitboard& board, int column_height[10], int depth);
 };
 
 #endif // EVAL_H

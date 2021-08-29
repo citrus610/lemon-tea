@@ -1,12 +1,28 @@
 #include "eval.h"
 
-int eval::evaluate(node& node)
+int eval::evaluate(node& node, piece_type* queue, int& queue_count)
 {
 	int score = 0;
+	bitboard board = node.board;
 
 	// Get column heights
 	int column_height[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	node.board.get_height(column_height);
+	board.get_height(column_height);
+
+	// Structure
+	eval::structure(board, column_height, node.structure);
+	if (node.lock != LOCK_TSPIN_1 && node.lock != LOCK_TSPIN_2 && node.lock != LOCK_TSPIN_3) {
+		node.waste_structure[0] += std::min(0, node.pre_structure[0] - node.structure[0]);
+		node.waste_structure[1] += std::min(0, node.pre_structure[1] - node.structure[1]);
+	}
+	score += node.structure[0] * heuristic.structure[0];
+	score += node.structure[1] * heuristic.structure[1];
+	score += node.waste_structure[0] * heuristic.waste_structure[0];
+	score += node.waste_structure[1] * heuristic.waste_structure[1];
+
+	// Quiescence
+	int quiescence_depth = (node.current == PIECE_T) + (node.hold == PIECE_T) + std::count(queue + node.next, queue + node.next + std::min(3, queue_count - node.next), PIECE_T);
+	eval::quiescence(board, column_height, quiescence_depth);
 
 	// Max height
 	int max_height = *std::max_element(column_height, column_height + 10);
@@ -16,7 +32,7 @@ int eval::evaluate(node& node)
 
 	// Well
 	int well_index = -1;
-	int well_depth = eval::well(node.board, column_height, well_index);
+	int well_depth = eval::well(board, column_height, well_index);
 	well_depth = std::min(well_depth, 15);
 	score += well_depth * heuristic.well;
 	if (well_index == 0 || well_index == 9)
@@ -36,31 +52,20 @@ int eval::evaluate(node& node)
 	score += bumpiness[2] * heuristic.bumpiness_t;
 
 	// Blocked cells
-	int blocked_cell = eval::blocked_cell(node.board, column_height);
+	int blocked_cell = eval::blocked_cell(board, column_height);
 	score += blocked_cell * heuristic.blocked_cell;
 	score += blocked_cell * blocked_cell * heuristic.blocked_cell_s;
 
 	// Hole
-	int hole = eval::hole(node.board, column_height);
+	int hole = eval::hole(board, column_height);
 	score += hole * heuristic.hole;
 	score += hole * hole * heuristic.hole_s;
 
 	// Block above hole
 	int block_above_hole[2] = { 0, 0 };
-	eval::block_above_hole(node.board, column_height, block_above_hole);
+	eval::block_above_hole(board, column_height, block_above_hole);
 	score += block_above_hole[0] * heuristic.block_above_hole;
 	score += block_above_hole[1] * heuristic.block_above_hole_s;
-
-	// Structure
-	eval::structure(node.board, column_height, node.structure);
-	if (node.lock != LOCK_TSPIN_1 && node.lock != LOCK_TSPIN_2 && node.lock != LOCK_TSPIN_3) {
-		node.waste_structure[0] += std::min(0, node.pre_structure[0] - node.structure[0]);
-		node.waste_structure[1] += std::min(0, node.pre_structure[1] - node.structure[1]);
-	}
-	score += node.structure[0] * heuristic.structure[0];
-	score += node.structure[1] * heuristic.structure[1];
-	score += node.waste_structure[0] * heuristic.waste_structure[0];
-	score += node.waste_structure[1] * heuristic.waste_structure[1];
 
 	// B2B
 	score += node.b2b * heuristic.b2b_chain;
@@ -101,7 +106,7 @@ int eval::evaluate(node& node)
 int eval::well(bitboard& board, int column_height[10], int& well_index)
 {
 	// Find well index - index of lowest column
-	int *min_height_ptr = std::min_element(column_height, column_height + 10);
+	int* min_height_ptr = std::min_element(column_height, column_height + 10);
 	int min_height = *min_height_ptr;
 	well_index = (int)(min_height_ptr - column_height);
 
@@ -207,32 +212,74 @@ void eval::structure(bitboard& board, int column_height[10], int result[2])
 			}
 		}
 		else
-		if (column_height[_x + 2] > column_height[_x + 1] && column_height[_x + 2] + 1 < column_height[_x + 0]) {
-			if (((board.column[_x + 0] >> (column_height[_x + 2] - 1)) & 0b111) == 0b101 &&
-				((board.column[_x + 1] >> (column_height[_x + 2] - 1)) & 0b111) == 0b000 &&
-				((board.column[_x + 2] >> (column_height[_x + 2] - 1)) & 0b111) == 0b001) {
-				++result[0];
-				_x += 2;
+			if (column_height[_x + 2] > column_height[_x + 1] && column_height[_x + 2] + 1 < column_height[_x + 0]) {
+				if (((board.column[_x + 0] >> (column_height[_x + 2] - 1)) & 0b111) == 0b101 &&
+					((board.column[_x + 1] >> (column_height[_x + 2] - 1)) & 0b111) == 0b000 &&
+					((board.column[_x + 2] >> (column_height[_x + 2] - 1)) & 0b111) == 0b001) {
+					++result[0];
+					_x += 2;
+				}
 			}
-		}
 		// TST or STSD
-		else
-		if (column_height[_x + 1] >= column_height[_x + 0] && column_height[_x + 1] + 1 < column_height[_x + 2]) {
-			if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000 &&
-				((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
-				((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000) {
-				++result[1];
-				_x += 2;
+			else
+				if (column_height[_x + 1] >= column_height[_x + 0] && column_height[_x + 1] + 1 < column_height[_x + 2]) {
+					if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000 &&
+						((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
+						((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000) {
+						++result[1];
+						_x += 2;
+					}
+				}
+				else
+					if (column_height[_x + 1] >= column_height[_x + 2] && column_height[_x + 1] + 1 < column_height[_x + 0]) {
+						if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000 &&
+							((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
+							((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000) {
+							++result[1];
+							_x += 2;
+						}
+					}
+	}
+}
+
+void eval::quiescence(bitboard& board, int column_height[10], int depth)
+{
+	for (int i = 0; i < depth; ++i) {
+		bitboard copy = board;
+		int struct_x = -1;
+		int struct_y = -1;
+		for (int _x = 0; _x < 8; ++_x) {
+			if (column_height[_x + 0] > column_height[_x + 1] && column_height[_x + 0] + 1 < column_height[_x + 2]) {
+				if (((board.column[_x + 0] >> (column_height[_x + 0] - 1)) & 0b111) == 0b001 &&
+					((board.column[_x + 1] >> (column_height[_x + 0] - 1)) & 0b111) == 0b000 &&
+					((board.column[_x + 2] >> (column_height[_x + 0] - 1)) & 0b111) == 0b101) {
+					struct_x = _x + 1;
+					struct_y = column_height[_x + 0];
+					break;
+				}
 			}
+			else
+				if (column_height[_x + 2] > column_height[_x + 1] && column_height[_x + 2] + 1 < column_height[_x + 0]) {
+					if (((board.column[_x + 0] >> (column_height[_x + 2] - 1)) & 0b111) == 0b101 &&
+						((board.column[_x + 1] >> (column_height[_x + 2] - 1)) & 0b111) == 0b000 &&
+						((board.column[_x + 2] >> (column_height[_x + 2] - 1)) & 0b111) == 0b001) {
+						struct_x = _x + 1;
+						struct_y = column_height[_x + 2];
+						break;
+					}
+				}
+		}
+		if (struct_x == -1 || struct_y == -1) break;
+		piece_data quiet_piece = { struct_x, struct_y, PIECE_T, PIECE_DOWN, true };
+		copy.place_piece(quiet_piece);
+		int line_clear = copy.clear_line();
+		if (line_clear >= 2) {
+			board = copy;
+			board.get_height(column_height);
 		}
 		else
-		if (column_height[_x + 1] >= column_height[_x + 2] && column_height[_x + 1] + 1 < column_height[_x + 0]) {
-			if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000 &&
-				((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
-				((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000) {
-				++result[1];
-				_x += 2;
-			}
+		{
+			break;
 		}
 	}
 }
@@ -250,7 +297,7 @@ void weight::standard()
 	bumpiness_t = -32;
 	hole = -173;
 	hole_s = -3;
-	blocked_cell = -86;
+	blocked_cell = -34;
 	blocked_cell_s = -1;
 	block_above_hole = -17;
 	block_above_hole_s = -1;
@@ -272,7 +319,7 @@ void weight::standard()
 	clear[2] = -88;
 	clear[3] = 390;
 	t_spin[0] = 121;
-	t_spin[1] = 410;
+	t_spin[1] = 482;
 	t_spin[2] = 682;
 	perfect_clear = 999;
 	waste_time = -162;
