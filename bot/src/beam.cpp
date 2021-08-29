@@ -281,6 +281,30 @@ void beam::search_one_iter(int& iter_num, int& layer_index, int& node_count)
 	// Force 1st level search
 	if (iter_num == 0) {
 		expand_node(root, layer[0], true, false, node_count);
+
+		// Check for force t spin or tetris
+		node force_node[16];
+		int force_node_count = 0;
+		for (int i = 0; i < layer[0].size; ++i) {
+			if (layer[0].pointer[i].lock == LOCK_TSPIN_2 || layer[0].pointer[i].lock == LOCK_TSPIN_3 || layer[0].pointer[i].lock == LOCK_PC) {
+				force_node[force_node_count] = layer[0].pointer[i];
+				++force_node_count;
+			}
+		}
+		if (force_node_count > 0) {
+			for (int i = 0; i < layer[0].size; ++i) {
+				if (layer[0].pointer[i].lock == LOCK_TSPIN_1 || layer[0].pointer[i].lock == LOCK_CLEAR_4) {
+					force_node[force_node_count] = layer[0].pointer[i];
+					++force_node_count;
+				}
+			}
+			layer[0].clear();
+			for (int i = 0; i < force_node_count; ++i) {
+				layer[0].add(force_node[i]);
+				std::push_heap(layer[0].pointer, layer[0].pointer + layer[0].size);
+			}
+		}
+
 		layer_index = 0;
 		return;
 	}
@@ -288,7 +312,7 @@ void beam::search_one_iter(int& iter_num, int& layer_index, int& node_count)
 	// Normal beam search
 	if (iter_num < depth) {
 		search_width = width_l;
-		if (iter_num == 1) search_width = layer[0].size * (100 - prune_percentage) / 100;
+		if (iter_num == 1) search_width = std::max(layer[0].size, width_s) * (100 - prune_percentage) / 100;
 		layer_index = iter_num - 1;
 	}
 	// Backtracking
