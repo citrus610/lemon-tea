@@ -20,8 +20,8 @@ void gamebot::load()
 	file.open("init.json");
 	json js;
 	file >> js;
-	set_from_json(js, 1, w_1, bot_speed_percentage_1, bot_preview_1, bot_forecast_1);
-	set_from_json(js, 2, w_2, bot_speed_percentage_2, bot_preview_2, bot_forecast_2);
+	set_from_json(js, 1, enable_bot_1, w_1, bot_speed_percentage_1, bot_preview_1, bot_forecast_1);
+	set_from_json(js, 2, enable_bot_2, w_2, bot_speed_percentage_2, bot_preview_2, bot_forecast_2);
 	file.close();
 
 	if (this->enable_bot_1) {
@@ -131,6 +131,7 @@ void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, bot& _bo
 		if (solution_vec.empty()) {
 			bot_solution solution = _bot.request_solution();
 			_board.bot_elapse_time = bot_elaspe_time * 1000;
+			char before_board_hold = _board.hold_piece;
 			if (solution.is_hold) _board.hold();
 
 			// Check if misdrop
@@ -241,6 +242,7 @@ void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, bot& _bo
 			memcpy(state.next, next_q, next_q_count * sizeof(piece_type));
 			state.b2b = new_n.b2b;
 			state.ren = new_n.ren;
+			state.first_hold = (before_board_hold == ' ' && solution.is_hold);
 			_bot.set_state(state);
 
 			// Setting bot log thingy
