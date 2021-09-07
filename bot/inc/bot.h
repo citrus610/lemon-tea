@@ -10,6 +10,7 @@ struct bot_new_state {
 	piece_type next[16];
 	int b2b = 0;
 	int ren = 0;
+	bool first_hold = false;
 };
 
 struct bot_solution {

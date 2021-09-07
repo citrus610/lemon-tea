@@ -5,18 +5,13 @@
 */
 int a_star_node::calculate_score(piece_data& destination)
 {
-	int min_height = 100;
-	for (int i = 0; i < 4; ++i) {
-		min_height = std::min(min_height, piece.y + piece_def_lut[destination.type][destination.rotation][i][1]);
-	}
 	score = (piece.x - destination.x) * (piece.x - destination.x);
-	score += (piece.y - destination.y) * (piece.y - destination.y) * ((drop_count > 0) * 2 - 1);
-	if (drop_count == 0) score -= min_height * min_height * 25;
+	score += (piece.y - destination.y) * (piece.y - destination.y) * ((drop_count > 0) * 2 - 1) * 1000;
 	if (piece.rotation - destination.rotation == 3)
 		score += 1;
 	else
 		score += (piece.rotation - destination.rotation) * (piece.rotation - destination.rotation);
-	score += path_count * path_count;
+	score += frame_count * frame_count * frame_count * frame_count;
 	score += drop_count * drop_count;
 	score += rotate_count * rotate_count;
 	score += move_after_drop_count * move_after_drop_count;
@@ -96,7 +91,9 @@ void pathfinder::search(bitboard& board, piece_data& destination, move_type resu
 
 				// Add move to children's path
 				children[i].path[children[i].path_count] = (move_type)i;
+				if (children[i].path[children[i].path_count - 1] == (move_type)i) ++children[i].frame_count;
 				++children[i].path_count;
+				++children[i].frame_count;
 
 				// If have already soft dropped once, every moves after that should be checked if on floor and updated
 				if (children[i].drop_count > 0) {

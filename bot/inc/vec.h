@@ -24,6 +24,7 @@ public:
 	void add(const T& element); // There will be 1 copy maked if use this
 	void pop();
 	void clear(); // This won't free memory
+	void erase(int index); // This won't free memory
 	void free(); // This will free memory
 };
 
@@ -70,6 +71,17 @@ template<typename T>
 inline void vec<T>::clear()
 {
 	size = 0;
+}
+
+template<typename T>
+inline void vec<T>::erase(int index)
+{
+	if (size <= 0) return;
+	if (index < 0 || index >= size) return;
+	for (int i = index; i < size - 1; ++i) {
+		pointer[index] = pointer[index + 1];
+	}
+	pop();
 }
 
 template<typename T>

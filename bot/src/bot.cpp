@@ -58,6 +58,8 @@ void bot::start(int depth, weight heuristic, bool forecast)
 				node_count = 0;
 				depth = 0;
 
+				// If first hold then update forecast bag index
+				if (new_state_buffer[0].first_hold) bot_beam.forecast_bag_index = (bot_beam.forecast_bag_index + 1) % 7;
 				bot_beam.set_root(new_state_buffer[0].board, new_state_buffer[0].current, new_state_buffer[0].hold, new_state_buffer[0].next, new_state_buffer[0].b2b, new_state_buffer[0].ren);
 
 				new_state_buffer.clear();

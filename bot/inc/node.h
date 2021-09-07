@@ -43,7 +43,7 @@ struct node {
 */
 struct reward {
 	int visit = 0;
-	int score = -999999;
+	int score = 0;
 	bitboard board;
 	piece_data placement;
 
@@ -52,12 +52,18 @@ struct reward {
 			return score < other.score;
 		else
 			return visit < other.visit;
+		//if (visit == 0) return true;
+		//if (other.visit == 0) return false;
+		//return (score / visit) < (other.score / other.visit);
 	}
 	bool operator > (const reward& other) {
 		if (visit == other.visit)
 			return score > other.score;
 		else
 			return visit > other.visit;
+		//if (visit == 0) return false;
+		//if (other.visit == 0) return true;
+		//return (score / visit) > (other.score / other.visit);
 	}
 };
 

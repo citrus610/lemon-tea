@@ -41,7 +41,7 @@ void beam::reset()
 	queue_count = preview;
 	for (int i = 0; i < max_reward; ++i) {
 		reward[i].visit = 0;
-		reward[i].score = -999999;
+		reward[i].score = 0;
 	}
 	reward_count = 0;
 
@@ -282,7 +282,7 @@ void beam::search_one_iter(int& iter_num, int& layer_index, int& node_count)
 	if (iter_num == 0) {
 		expand_node(root, layer[0], true, false, node_count);
 
-		// Check for force t spin or tetris
+		// Check for force t spin
 		node force_node[16];
 		int force_node_count = 0;
 		for (int i = 0; i < layer[0].size; ++i) {
@@ -312,7 +312,7 @@ void beam::search_one_iter(int& iter_num, int& layer_index, int& node_count)
 	// Normal beam search
 	if (iter_num < depth) {
 		search_width = width_l;
-		if (iter_num == 1) search_width = std::max(layer[0].size, width_s) * (100 - prune_percentage) / 100;
+		if (iter_num == 1) search_width = std::max(layer[0].size * (100 - prune_percentage) / 100, 8);
 		layer_index = iter_num - 1;
 	}
 	// Backtracking

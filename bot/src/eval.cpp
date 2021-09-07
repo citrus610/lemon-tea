@@ -72,8 +72,8 @@ int eval::evaluate(node& node, piece_type* queue, int& queue_count)
 	score += node.max_b2b * heuristic.b2b_max_chain;
 
 	// REN
-	score += node.ren * heuristic.ren_chain;
-	score += node.max_ren * heuristic.ren_max_chain;
+	score += std::min(node.ren, 4) * heuristic.ren_chain;
+	score += std::min(node.max_ren, 4) * heuristic.ren_max_chain;
 
 	// Perfect clear
 	score += node.pc * heuristic.perfect_clear;

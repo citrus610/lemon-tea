@@ -9,6 +9,7 @@ struct a_star_node {
 	int rotate_count = 0;
 	int drop_count = 0;
 	int move_after_drop_count = 0;
+	int frame_count;
 	move_type path[32];
 	int path_count = 0;
 
