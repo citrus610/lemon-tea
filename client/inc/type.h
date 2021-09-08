@@ -129,6 +129,7 @@ static void draw_board(bitboard& board) {
 	std::cout << std::endl;
 };
 
+
 static void create_json() {
 
 	// Check if existed?
@@ -151,6 +152,7 @@ static void create_json() {
 
 		std::string player_id = std::string("player ") + std::to_string(i);
 
+		js[player_id]["enable"] = true;
 		js[player_id]["preview"] = 5;
 		js[player_id]["speed"] = 100;
 		js[player_id]["forecast"] = true;
@@ -214,9 +216,12 @@ static void create_json() {
 	o.close();
 };
 
-static void set_from_json(json& js, int player_id, weight& heuristic, int& speed, int& preview, bool& forecast) {
+static void set_from_json(json& js, int player_id, bool& enable_bot, weight& heuristic, int& speed, int& preview, bool& forecast) {
 
 	std::string id = std::string("player ") + std::to_string(player_id);
+
+	// Enable bot
+	enable_bot = js[id]["enable"];
 
 	// Preview
 	preview = js[id]["preview"];
