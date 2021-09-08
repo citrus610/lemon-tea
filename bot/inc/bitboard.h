@@ -43,31 +43,7 @@ struct bitboard
 			if (column[i] != other.column[i]) return false;
 		}
 		return true;
-	}
-
-	bool dif_cus_gar(bitboard& other) {
-		int height[10];
-		int height_other[10];
-		get_height(height);
-		other.get_height(height_other);
-		int max_height = *std::max_element(height, height + 10);
-		int max_height_other = *std::max_element(height_other, height_other + 10);
-		if (max_height > max_height_other) {
-			bitboard copy = *this;
-			for (int i = 0; i < 10; ++i) {
-				copy.column[i] = copy.column[i] >> (max_height - max_height_other);
-			}
-			return copy == other;
-		}
-		else if (max_height < max_height_other) {
-			bitboard copy = other;
-			for (int i = 0; i < 10; ++i) {
-				copy.column[i] = copy.column[i] >> (max_height_other - max_height);
-			}
-			return copy == *this;
-		}
-		return false;
-	}
+	};
 };
 
 #endif // BITBOARD_H
