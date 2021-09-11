@@ -5,7 +5,7 @@ void beam::init(int preview, bool is_forecast)
 	// Setting things
 	this->preview = preview;
 	this->is_forecast = is_forecast;
-	forecast_bag_index = 0;
+	forecast_bag_index = 1; // THIS 
 	queue_count = 0;
 	reward_count = 0;
 	evaluator.heuristic.standard();
