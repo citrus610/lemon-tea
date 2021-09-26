@@ -24,6 +24,7 @@ struct weight {
 	int b2b_max_chain = 0;
 	int ren_chain = 0;
 	int ren_max_chain = 0;
+	int ren_acc_chain = 0;
 	int clear[4] = { 0, 0, 0, 0 };
 	int t_spin[3] = { 0, 0, 0 };
 	int perfect_clear = 0;
@@ -49,7 +50,7 @@ public:
 	static int hole(bitboard& board, int column_height[10]);
 	static void block_above_hole(bitboard& board, int column_height[10], int result[2]);
 	static void structure(bitboard& board, int column_height[10], int result[2]);
-	static void quiescence(bitboard& board, int column_height[10], int depth);
+	static void quiescence(bitboard& board, int column_height[10], int depth_T);
 };
 
 #endif // EVAL_H

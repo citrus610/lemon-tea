@@ -20,15 +20,15 @@ int eval::evaluate(node& node, piece_type* queue, int& queue_count)
 	score += node.waste_structure[0] * heuristic.waste_structure[0];
 	score += node.waste_structure[1] * heuristic.waste_structure[1];
 
-	// Quiescence
-	int quiescence_depth = (node.current == PIECE_T) + (node.hold == PIECE_T) + std::count(queue + node.next, queue + node.next + std::min(3, queue_count - node.next), PIECE_T);
-	eval::quiescence(board, column_height, quiescence_depth);
-
 	// Max height
 	int max_height = *std::max_element(column_height, column_height + 10);
 	score += max_height * heuristic.max_height;
 	score += std::max(max_height - 10, 0) * heuristic.max_height_top_half;
 	score += std::max(max_height - 15, 0) * heuristic.max_height_top_quarter;
+
+	// Quiescence
+	int quiescence_depth_T = (node.current == PIECE_T) + (node.hold == PIECE_T) + std::count(queue + node.next, queue + node.next + std::min(3, queue_count - node.next), PIECE_T);
+	eval::quiescence(board, column_height, quiescence_depth_T);
 
 	// Well
 	int well_index = -1;
@@ -72,8 +72,9 @@ int eval::evaluate(node& node, piece_type* queue, int& queue_count)
 	score += node.max_b2b * heuristic.b2b_max_chain;
 
 	// REN
-	score += std::min(node.ren, 4) * heuristic.ren_chain;
-	score += std::min(node.max_ren, 4) * heuristic.ren_max_chain;
+	score += node.ren * heuristic.ren_chain;
+	score += node.max_ren * heuristic.ren_max_chain;
+	score += node.max_ren * node.max_ren / 5 * heuristic.ren_acc_chain;
 
 	// Perfect clear
 	score += node.pc * heuristic.perfect_clear;
@@ -242,9 +243,10 @@ void eval::structure(bitboard& board, int column_height[10], int result[2])
 	}
 }
 
-void eval::quiescence(bitboard& board, int column_height[10], int depth)
+void eval::quiescence(bitboard& board, int column_height[10], int depth_T)
 {
-	for (int i = 0; i < depth; ++i) {
+	// Check t spin double
+	for (int i = 0; i < depth_T; ++i) {
 		bitboard copy = board;
 		int struct_x = -1;
 		int struct_y = -1;
@@ -314,6 +316,7 @@ void weight::standard()
 	b2b_max_chain = 52;
 	ren_chain = 12;
 	ren_max_chain = 54;
+	ren_acc_chain = 104;
 	clear[0] = -173;
 	clear[1] = -122;
 	clear[2] = -88;
