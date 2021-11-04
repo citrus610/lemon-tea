@@ -1,17 +1,15 @@
-#ifndef GENMOVE_H
-#define GENMOVE_H
+#pragma once
 
 #include "bitboard.h"
 
-#define MAX_MOVE_GEN_COUNT 80
-#define MAX_SOFT_DROP_DEPTH 2
+constexpr int MAX_MOVE_GENERATOR = 64;
 
-class genmove
+class MoveGenerator
 {
 public:
-	static void generate(bitboard& board, piece_type piece, piece_data result[MAX_MOVE_GEN_COUNT], int& result_count);
-	static void generate_from_list(bitboard& board, piece_type piece, piece_data pre[MAX_MOVE_GEN_COUNT], int& pre_count, piece_data next[MAX_MOVE_GEN_COUNT], int& next_count);
-	static int is_piece_in_list(piece_data& piece, piece_data list[MAX_MOVE_GEN_COUNT], int& list_count);
+	static void generate(BitBoard& board, PieceType piece, PieceData result[MAX_MOVE_GENERATOR], int& result_count);
+public:
+	static int is_in(PieceData& placement, PieceData list[MAX_MOVE_GENERATOR], int& list_count, bool exact);
+	static void expand(BitBoard& board, PieceData& piece, PieceData result[4], int& result_count);
 };
 
-#endif // GENMOVE_H

@@ -1,30 +1,30 @@
-#ifndef PATHFINDER_H
-#define PATHFINDER_H
+#pragma once
 
 #include "bitboard.h"
 
-struct a_star_node {
-	piece_data piece;
-	int score = 0;
-	int rotate_count = 0;
-	int drop_count = 0;
-	int move_after_drop_count = 0;
-	int frame_count;
-	move_type path[32];
+struct PathFinderNode {
+	PieceData position;
+	MoveType path[32] = {};
 	int path_count = 0;
+	int input_count = 0;
 
-	bool operator < (const a_star_node& other) {
-		return score > other.score;
-	};
+	bool operator < (PathFinderNode& other) {
+		if (input_count == other.input_count) return path_count < other.path_count;
+		return input_count < other.input_count;
+	}
 
-	int calculate_score(piece_data& destination);
+	bool operator > (PathFinderNode& other) {
+		if (input_count == other.input_count) return path_count > other.path_count;
+		return input_count > other.input_count;
+	}
 };
 
-class pathfinder
-{
+class PathFinder {
 public:
-	static void search(bitboard& board, piece_data& destination, move_type result[32], int& result_count);
-	static int is_in_list(std::vector<a_star_node>& open_list, a_star_node& node);
+	static bool search(BitBoard& board, PieceData& placement, MoveType list[32], int& list_count);
+public:
+	static void calculate_input(PathFinderNode& node);
+	static void expand(BitBoard& board, PathFinderNode& node, PathFinderNode result[4], int& result_count);
+	static void generate_on_stack(BitBoard& board, PieceType piece, std::vector<PathFinderNode>& result);
+	static int list_index(PathFinderNode& node, std::vector<PathFinderNode>& list);
 };
-
-#endif // PATHFINDER_H

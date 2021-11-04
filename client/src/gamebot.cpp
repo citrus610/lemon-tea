@@ -2,18 +2,6 @@
 
 void gamebot::load()
 {
-	// Init game
-	srand((unsigned int)time(NULL));
-	this->img_counter.loadFromFile("res/graphic/counter.png");
-	this->sp_counter.setTexture(this->img_counter);
-	this->board_1.set_enemy(&this->board_2);
-	this->board_2.set_enemy(&this->board_1);
-	this->board_1.init();
-	this->board_2.init();
-	this->gameover_timer = 1.0;
-	this->gameover_counter = 119;
-
-
 	// Init bot
 	create_json();
 	std::ifstream file;
@@ -23,6 +11,19 @@ void gamebot::load()
 	set_from_json(js, 1, enable_bot_1, w_1, bot_speed_percentage_1, bot_preview_1, bot_forecast_1);
 	set_from_json(js, 2, enable_bot_2, w_2, bot_speed_percentage_2, bot_preview_2, bot_forecast_2);
 	file.close();
+
+	// Init game
+	srand((unsigned int)time(NULL));
+	this->img_counter.loadFromFile("res/graphic/counter.png");
+	this->sp_counter.setTexture(this->img_counter);
+	this->board_1.set_enemy(&this->board_2);
+	this->board_2.set_enemy(&this->board_1);
+	this->board_1.preview = bot_preview_1;
+	this->board_2.preview = bot_preview_2;
+	this->board_1.init();
+	this->board_2.init();
+	this->gameover_timer = 1.0;
+	this->gameover_counter = 119;
 
 	if (this->enable_bot_1) {
 		this->w_1.standard();
@@ -81,8 +82,8 @@ void gamebot::render()
 
 void gamebot::unload()
 {
-	if (this->enable_bot_1) this->bot_1.destroy();
-	if (this->enable_bot_2) this->bot_2.destroy();
+	if (this->enable_bot_1) this->bot_1.end_thread();
+	if (this->enable_bot_2) this->bot_2.end_thread();
 }
 
 void gamebot::start_game()
@@ -90,23 +91,24 @@ void gamebot::start_game()
 	this->board_1.init();
 	this->board_2.init();
 
+	this->piece_placed_count_1 = 0;
+	this->piece_placed_count_2 = 0;
+
 	if (this->enable_bot_1) {
-		this->bot_1.start(bot_preview_1, this->w_1, bot_forecast_1);
-		bot_new_state data_1 = board_to_bot_data(this->board_1);
-		this->bot_1.set_state(data_1);
+		BotState data_1 = board_to_bot_data(this->board_1);
+		this->bot_1.init_thread({this->w_1, false}, data_1);
 	}
 
 	if (this->enable_bot_2) {
-		this->bot_2.start(bot_preview_2, this->w_2, bot_forecast_2);
-		bot_new_state data_2 = board_to_bot_data(this->board_2);
-		this->bot_2.set_state(data_2);
+		BotState data_2 = board_to_bot_data(this->board_2);
+		this->bot_2.init_thread({this->w_2, false}, data_2);
 	}
 }
 
 void gamebot::update_game(double dt)
 {
-	if (this->enable_bot_1) this->handle_bot_input(dt, 1, this->board_1, this->bot_1, this->bot_speed_percentage_1, this->bot_input_timer_1, this->elaspe_time_1, this->solution_1);
-	if (this->enable_bot_2) this->handle_bot_input(dt, 2, this->board_2, this->bot_2, this->bot_speed_percentage_2, this->bot_input_timer_2, this->elaspe_time_2, this->solution_2);
+	if (this->enable_bot_1) this->handle_bot_input(dt, 1, this->board_1, this->bot_1, this->piece_placed_count_1, this->bot_speed_percentage_1, this->bot_input_timer_1, this->elaspe_time_1, this->solution_1);
+	if (this->enable_bot_2) this->handle_bot_input(dt, 2, this->board_2, this->bot_2, this->piece_placed_count_2, this->bot_speed_percentage_2, this->bot_input_timer_2, this->elaspe_time_2, this->solution_2);
 
 	this->board_1.update(dt);
 	this->board_2.update(dt);
@@ -116,134 +118,83 @@ void gamebot::end_game()
 {
 	this->solution_1.clear();
 	this->bot_input_timer_1 = 0.0;
-	if (this->enable_bot_1) this->bot_1.destroy();
+	if (this->enable_bot_1) this->bot_1.end_thread();
 
 	this->solution_2.clear();
 	this->bot_input_timer_2 = 0.0;
-	if (this->enable_bot_2) this->bot_2.destroy();
+	if (this->enable_bot_2) this->bot_2.end_thread();
 }
 
-void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, bot& _bot, int& bot_speed_percentage, double& bot_input_timer, double& bot_elaspe_time, std::vector<move_type>& solution_vec)
+void gamebot::handle_bot_input(double dt, int id, tetris_board& _board, Bot& _bot, int& piece_placed_count, int& bot_speed_percentage, double& bot_input_timer, double& bot_elaspe_time, std::vector<MoveType>& solution_vec)
 {
 	bot_elaspe_time += dt;
 
 	if (!_board.is_clearing_line() && !_board.is_placing_piece()) {
 		if (solution_vec.empty()) {
-			bot_solution solution = _bot.request_solution();
+			BotSolution solution = _bot.request_solution();
 			_board.bot_elapse_time = bot_elaspe_time * 1000;
-			char before_board_hold = _board.hold_piece;
-			if (solution.is_hold) _board.hold();
 
 			// Check if misdrop
 			// Disable for now
-			/*
-			bot_new_state current_state = board_to_bot_data(_board);
-			bitboard solution_board_copy = solution.board;
-			if (!(current_state.board == solution_board_copy) && id == 1) {
-				std::cout << "misdrop board " << id << std::endl << std::endl;
-
-				std::cout << "what bot receive" << std::endl;
-				draw_board(solution_board_copy);
-
-				std::cout << "real board" << std::endl;
-				draw_board(current_state.board);
-				std::cout << std::endl;
-
-
-
-				std::cout << "what bot prediect" << std::endl;
-				solution_board_copy.place_piece(solution.placement);
-				solution_board_copy.clear_line();
-				draw_board(solution_board_copy);
-
-				std::cout << "real board place piece" << std::endl;
-				piece_data s_p; s_p.x = 4; s_p.y = 19; s_p.rotation = PIECE_UP; s_p.type = solution.placement.type;
-				for (int i = 0; i < solution.move_list_count; ++i) {
-					switch (solution.move_list[i])
-					{
-					case MOVE_RIGHT:
-						current_state.board.piece_try_right(s_p);
-						break;
-					case MOVE_LEFT:
-						current_state.board.piece_try_left(s_p);
-						break;
-					case MOVE_CW:
-						current_state.board.piece_try_rotate(s_p, true);
-						break;
-					case MOVE_CCW:
-						current_state.board.piece_try_rotate(s_p, false);
-						break;
-					case MOVE_DOWN:
-						current_state.board.piece_try_down(s_p);
-						break;
-					}
-				}
-				current_state.board.place_piece(s_p);
-				current_state.board.clear_line();
-				draw_board(current_state.board);
-				std::cout << std::endl;
-				std::cout << std::endl << std::endl;
+			///*
+			BotState current_state = board_to_bot_data(_board);
+			BitBoard solution_board_copy = solution.original_board;
+			bool board_change = !(current_state.board == solution_board_copy);
+			if (board_change) {
+				Tree sub_tree;
+				sub_tree.init();
+				sub_tree.set(current_state.board, current_state.current, current_state.hold, current_state.next, current_state.next_count, current_state.b2b, current_state.ren);
+				solution.node = sub_tree.search(7);
+				solution.depth = 5;
+				solution.action = sub_tree.get_best().origin;
+				solution.move_count = 0;
+				PathFinder::search(current_state.board, solution.action.placement, solution.move, solution.move_count);
 			}
 			//*/
 
+			// Hold
+			char before_board_hold = _board.hold_piece;
+			if (solution.action.hold) _board.hold();
+
 			// Push moves to bot input vec
 			solution_vec.clear();
-			for (int i = 0; i < solution.move_list_count; ++i) {
-				solution_vec.push_back(solution.move_list[i]);
-			}
-			if (solution_vec.back() != MOVE_DOWN) {
-				solution_vec.push_back(MOVE_DOWN);
+			for (int i = 0; i < solution.move_count; ++i) {
+				solution_vec.push_back(solution.move[i]);
 			}
 
-			// Predict next board
-			piece_type next_q[16];
-			int next_q_count = 0;
-			for (int i = 0; i < std::min((int)_board.next_piece.size(), 16); ++i) {
-				next_q[i] = (char_to_piece(_board.next_piece[i]));
-				next_q_count++;
-			}
-
-			node old_n;
-			node new_n;
-			old_n = board_to_node(_board);
-			piece_data s_p; s_p.x = 4; s_p.y = 19; s_p.rotation = PIECE_UP; s_p.type = solution.placement.type;
-			for (int i = 0; i < solution.move_list_count; ++i) {
-				switch (solution.move_list[i])
-				{
-				case MOVE_RIGHT:
-					old_n.board.piece_try_right(s_p);
-					break;
-				case MOVE_LEFT:
-					old_n.board.piece_try_left(s_p);
-					break;
-				case MOVE_CW:
-					old_n.board.piece_try_rotate(s_p, true);
-					break;
-				case MOVE_CCW:
-					old_n.board.piece_try_rotate(s_p, false);
-					break;
-				case MOVE_DOWN:
-					old_n.board.piece_try_down(s_p);
-					break;
+			// Advance or set bot
+			if (!board_change) {
+				BotAction bot_action;
+				bot_action.action = solution.action;
+				bot_action.new_piece_count = 0;
+				if (before_board_hold == ' ' && solution.action.hold) {
+					++bot_action.new_piece_count;
 				}
-			}
-			old_n.board.piece_try_down(s_p);
-			new_n.attemp(old_n, s_p, false, next_q, next_q_count);
-			for (int i = 0; i < next_q_count - 1; ++i) {
-				next_q[i] = next_q[i + 1];
-			}
-			next_q_count--;
+				if (piece_placed_count > 0) {
+					++bot_action.new_piece_count;
+				}
+				++piece_placed_count;
+				for (int i = 0; i < bot_action.new_piece_count; ++i) {
+					bot_action.new_piece[i] = char_to_piece(_board.next_piece[(int)_board.preview - bot_action.new_piece_count + i]);
+				}
 
-			// Send bot predicted board state
-			bot_new_state state;
-			state.board = new_n.board;
-			state.current = char_to_piece(_board.next_piece[0]);
-			state.hold = new_n.hold;
-			memcpy(state.next, next_q, next_q_count * sizeof(piece_type));
-			state.b2b = new_n.b2b;
-			state.ren = new_n.ren;
-			state.first_hold = (before_board_hold == ' ' && solution.is_hold);
-			_bot.set_state(state);
+				_bot.advance_state(bot_action);
+			}
+			else {
+				BotState state;
+				state.board = current_state.board;
+				state.board.place_piece(solution.action.placement);
+				state.board.clear_line();
+				state.current = char_to_piece(_board.next_piece[0]);
+				state.hold = char_to_piece(_board.hold_piece);
+				state.next_count = _board.preview - 1;
+				for (int i = 0; i < _board.preview - 1; ++i) {
+					state.next[i] = char_to_piece(_board.next_piece[i + 1]);
+				}
+				state.b2b = current_state.b2b;
+				state.ren = current_state.ren;
+				_bot.set_state(state);
+			}
 
 			// Setting bot log thingy
 			bot_input_timer = 0.0;

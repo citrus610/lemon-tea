@@ -1,53 +1,55 @@
-#ifndef BOT_H
-#define BOT_H
+#pragma once
 
-#include "beam.h"
+#include "tree.h"
+#include "debug.h"
 
-struct bot_new_state {
-	bitboard board;
-	piece_type current = PIECE_NONE;
-	piece_type hold = PIECE_NONE;
-	piece_type next[16];
-	int b2b = 0;
-	int ren = 0;
-	bool first_hold = false;
-};
-
-struct bot_solution {
-	// Bot's placement and instrcution
-	bitboard board;
-	piece_data placement;
-	move_type move_list[32];
-	int move_list_count = 0;
-	bool is_hold = false;
-	int visit = 0;
-	int score = 0;
-	int index = -1;
-
-	// Bot's log
+struct BotSolution {
+	BitBoard original_board;
+	Action action;
+	MoveType move[32];
+	int move_count = 0;
 	int node = 0;
 	int depth = 0;
 };
 
-class bot
+struct BotState {
+	BitBoard board;
+	PieceType current = PIECE_NONE;
+	PieceType hold = PIECE_NONE;
+	PieceType next[MAX_TREE_QUEUE];
+	int next_count = 0;
+	int b2b = 0;
+	int ren = 0;
+};
+
+struct BotAction {
+	Action action;
+	PieceType new_piece[MAX_TREE_QUEUE];
+	int new_piece_count = 0;
+};
+
+struct BotSetting {
+	Weight weight;
+	bool forecast = false;
+};
+
+class Bot
 {
 	std::mutex mutex;
 	std::condition_variable cv;
-	bool solution_ready = false;
-	bool solution_need = false;
+	std::vector<BotState> state_buffer;
+	std::vector<BotAction> action_buffer;
+	std::vector<BotSolution> solution_buffer;
 	bool running = false;
-	std::vector<bot_new_state> new_state_buffer;
-	std::vector<bot_solution> solution_buffer;
-
+	bool solution_need = false;
 public:
 	std::thread* thread = nullptr;
-
 public:
-	void start(int depth, weight heuristic, bool forecast);
-	void destroy();
-	bot_solution request_solution();
-	void set_state(bot_new_state new_state);
+	void init_thread(BotSetting setting, BotState state);
+	void end_thread();
+	void set_state(BotState state);
+	void advance_state(BotAction action);
+	BotSolution request_solution();
 	bool is_running();
 };
 
-#endif // BOT_H

@@ -1,96 +1,127 @@
-#ifndef VEC_H
-#define VEC_H
+/*
+* A custom vector
+* They call me a mad man
+*/
+
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
 
-/*
-A very UNSAFE fixed-size vector for very special personal situations
-Use with CAUTIONS, can causes UNDEFINED BEHAVIORS
-*/
 template <typename T>
 class vec
 {
 public:
 	vec();
 	~vec();
-
+private:
+	T* pointer = nullptr;
+	int capacity = 0;
+	int size = 0;
 public:
-	T* pointer = nullptr; // This shouldn't be tampered unless must
-	int max_size = 0; // This shouldn't be tampered unless must
-	int size = 0; // This shouldn't be tampered unless must
 	T& operator [] (const int& index) { return pointer[index]; };
-	void init(int max); // Must call this once right after create vec
-	void add(const T& element); // There will be 1 copy maked if use this
+	void init(int count);
+	void add(const T& element);
 	void pop();
-	void clear(); // This won't free memory
-	void erase(int index); // This won't free memory
-	void free(); // This will free memory
+	void clear();
+	void erase(int index);
+	void destroy();
+public:
+	int get_size();
+	int get_capacity();
+public:
+	T* iter_begin();
+	T* iter_end();
 };
 
 template<typename T>
 inline vec<T>::vec()
 {
-	pointer = nullptr;
-	max_size = 0;
-	size = 0;
+	this->pointer = nullptr;
+	this->capacity = 0;
+	this->size = 0;
 }
 
 template<typename T>
 inline vec<T>::~vec()
 {
-	free();
+	this->destroy();
 }
 
 template<typename T>
-inline void vec<T>::init(int max)
+inline void vec<T>::init(int count)
 {
-	if (pointer != nullptr) return;
-	//pointer = (T*)malloc(max * sizeof(T));
-	pointer = new T[max];
-	size = 0;
-	max_size = max;
+	if (this->pointer != nullptr) return;
+	this->pointer = (T*)malloc(count * sizeof(T));
+	this->size = 0;
+	this->capacity = count;
 }
 
 template<typename T>
 inline void vec<T>::add(const T& element)
 {
-	++size;
-	size = std::min(size, max_size);
-	pointer[size - 1] = element;
+	if (this->size >= this->capacity) {
+		T* new_pointer = (T*)realloc(this->pointer, (size_t)this->capacity * (size_t)2 * sizeof(T));
+		if (new_pointer == NULL) return;
+		this->pointer = new_pointer;
+		this->capacity = this->capacity * 2;
+	}
+	++this->size;
+	this->pointer[size - 1] = element;
 }
 
 template<typename T>
 inline void vec<T>::pop()
 {
-	--size;
-	size = std::max(size, 0);
+	--this->size;
+	this->size = std::max(size, 0);
 }
 
 template<typename T>
 inline void vec<T>::clear()
 {
-	size = 0;
+	this->size = 0;
 }
 
 template<typename T>
 inline void vec<T>::erase(int index)
 {
-	if (size <= 0) return;
-	if (index < 0 || index >= size) return;
-	for (int i = index; i < size - 1; ++i) {
+	if (this->size <= 0) return;
+	if (index < 0 || index >= this->size) return;
+	for (int i = index; i < this->size - 1; ++i) {
 		pointer[index] = pointer[index + 1];
 	}
 	pop();
 }
 
 template<typename T>
-inline void vec<T>::free()
+inline void vec<T>::destroy()
 {
-	if (pointer == nullptr) return;
-	//free(pointer);
-	delete[] pointer;
-	pointer = nullptr;
+	if (this->pointer == nullptr) return;
+	free(this->pointer);
+	this->pointer = nullptr;
 }
 
-#endif // VEC_H
+template<typename T>
+inline int vec<T>::get_size()
+{
+	return this->size;
+}
+
+template<typename T>
+inline int vec<T>::get_capacity()
+{
+	return this->capacity;
+}
+
+template<typename T>
+inline T* vec<T>::iter_begin()
+{
+	return this->pointer;
+}
+
+template<typename T>
+inline T* vec<T>::iter_end()
+{
+	return this->pointer + this->size;
+}

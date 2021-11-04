@@ -1,201 +1,207 @@
 #include "genmove.h"
 
-/*
-* Generate possible (not all) piece positions for the current board and piece state
-* How this works:
-*  - STEP 1: Generate all hard drop positions
-*  - STEP 2: For all hard drop positions, try move left right or rotate piece to find new soft drops positions
-*  - STEP 3: For all new soft drop positions, again try move left right or rotate piece to find newer positions
-*  - STEP 4: Repeat STEP 3 for N time, usually N = 2 to save time;
-*/
-void genmove::generate(bitboard& board, piece_type piece, piece_data result[MAX_MOVE_GEN_COUNT], int& result_count)
+void MoveGenerator::generate(BitBoard& board, PieceType piece, PieceData result[MAX_MOVE_GENERATOR], int& result_count)
 {
 	result_count = 0;
-	piece_data soft_drop_list[MAX_SOFT_DROP_DEPTH][MAX_MOVE_GEN_COUNT];
-	int soft_drop_count[MAX_SOFT_DROP_DEPTH];
 
-
-	/* STEP 1: Find all hard drop positions */
-
-	// Count maximum rotation count
-	int max_rotation_count = 4;
-
-	if (piece == PIECE_O)
-		max_rotation_count = 1;
-	else if (piece == PIECE_I || piece == PIECE_S || piece == PIECE_Z)
-		max_rotation_count = 2;
-
-	// Find possible initial y piece positions
-	int y_init_pos = 19;
-	if (board.is_occupied(4, y_init_pos)) { // If piece collides with the board at the starting positions, then return null
-		++y_init_pos;
-		if (board.is_occupied(4, y_init_pos)) return;
-	}
-
-	// Drop pieces and find hard drop positions
-	for (int rotation_state = 0; rotation_state < max_rotation_count; ++rotation_state) { // For every rotation state
-		for (int x_pos = 4; x_pos >= 0; --x_pos) { // For every x position move left
-			// If piece is colliding with board then move on
-			if (board.is_colliding(x_pos, y_init_pos, piece, (piece_rotation)rotation_state)) break;
-
-			// Create a simulating piece
-			piece_data simulating_piece = { x_pos, y_init_pos, piece, (piece_rotation)rotation_state, false };
-
-			// Calculate drop distance, if negative: move on, else: drop piece
-			int drop_distance = board.get_drop_distance(simulating_piece);
-			if (drop_distance < 0) continue;
-			simulating_piece.y -= drop_distance;
-
-			// Push simulating piece to piece list
-			result[result_count] = simulating_piece;
-			++result_count;
-		}
-		for (int x_pos = 5; x_pos < 10; ++x_pos) { // For every x position move right
-			// If piece is colliding with board then move on
-			if (board.is_colliding(x_pos, y_init_pos, piece, (piece_rotation)rotation_state)) break;
-
-			// Create a simulating piece
-			piece_data simulating_piece = { x_pos, y_init_pos, piece, (piece_rotation)rotation_state, false };
-
-			// Calculate drop distance, if negative: move on, else: drop piece
-			int drop_distance = board.get_drop_distance(simulating_piece);
-			if (drop_distance < 0) continue;
-			simulating_piece.y -= drop_distance;
-
-			// Push simulating piece to piece list
-			result[result_count] = simulating_piece;
-			++result_count;
+	// Check fast mode
+	bool fast_drop = true;
+	for (int i = 0; i < 10; ++i) {
+		if (64 - std::countl_zero(board.column[i]) > 16) {
+			fast_drop = false;
+			break;
 		}
 	}
 
-	/* STEP 2: For all hard drop positions, try move left right or rotate piece to find new soft drops positions, repeat this step N times, default N = 2 */
-	if (result_count == 0) return;
-	generate_from_list(board, piece, result, result_count, soft_drop_list[0], soft_drop_count[0]);
-	for (int i = 0; i < MAX_SOFT_DROP_DEPTH - 1; ++i) {
-		generate_from_list(board, piece, soft_drop_list[i], soft_drop_count[i], soft_drop_list[i + 1], soft_drop_count[i + 1]);
+	// Find all hardrop positions
+	PieceData harddrop[MAX_MOVE_GENERATOR];
+	int harddrop_count = 0;
+
+	if (fast_drop) {
+		int rotation_count = 4;
+		if (piece == PIECE_O) rotation_count = 1;
+
+		int piece_max_rotation = 4;
+		if (piece == PIECE_I || piece == PIECE_Z || piece == PIECE_S) piece_max_rotation = 2;
+		if (piece == PIECE_O) piece_max_rotation = 1;
+
+		for (int rotation = 0; rotation < rotation_count; ++rotation) {
+			for (int x = 0; x < 10; ++x) {
+				if (board.is_colliding(x, 19, piece, (PieceRotation)rotation)) {
+					continue;
+				}
+
+				PieceData new_location = {
+					x,
+					19,
+					piece,
+					(PieceRotation)rotation
+				};
+
+				new_location.y -= board.get_drop_distance(new_location);
+
+				harddrop[harddrop_count] = new_location;
+				++harddrop_count;
+
+				if (rotation < piece_max_rotation) {
+					result[result_count] = new_location;
+					++result_count;
+				}
+			}
+		}
+	}
+	else {
+		PieceData open[MAX_MOVE_GENERATOR * 2];
+		int open_count = 0;
+		PieceData close[MAX_MOVE_GENERATOR * 2];
+		int close_count = 0;
+
+		PieceData init_location = {
+			4,
+			19,
+			piece,
+			PIECE_UP
+		};
+
+		if (board.is_colliding(4, 19, piece, PIECE_UP)) {
+			init_location.y = 20;
+			if (board.is_colliding(4, 20, piece, PIECE_UP)) {
+				return;
+			}
+		}
+
+		open[0] = init_location;
+		++open_count;
+
+		while (open_count > 0)
+		{
+			PieceData parent = open[0];
+
+			open[0] = open[open_count - 1];
+			--open_count;
+
+			PieceData children[4];
+			int children_count = 0;
+
+			MoveGenerator::expand(board, parent, children, children_count);
+
+			for (int i = 0; i < children_count; ++i) {
+				if (children[i].y < 22 &&
+					MoveGenerator::is_in(children[i], open, open_count, true) == -1 &&
+					MoveGenerator::is_in(children[i], close, close_count, true) == -1) {
+					open[open_count] = children[i];
+					++open_count;
+
+					children[i].y -= board.get_drop_distance(children[i]);
+					if (children[i].y >= 20) continue;
+					if (MoveGenerator::is_in(children[i], harddrop, harddrop_count, false) == -1) {
+						harddrop[harddrop_count] = children[i];
+						++harddrop_count;
+					}
+				}
+
+			}
+
+			close[close_count] = parent;
+			++close_count;
+		}
+
+		memcpy(result, harddrop, harddrop_count * sizeof(PieceData));
+		result_count = harddrop_count;
 	}
 
+	// Find some soft drop positions
+	PieceData softdrop[2][MAX_MOVE_GENERATOR];
+	int softdrop_count[2] = { 0, 0 };
 
-	/* STEP 3: Push all new positions to the result queue */
-	for (int i = 0; i < MAX_SOFT_DROP_DEPTH; ++i) {
-		memcpy(result + result_count, soft_drop_list[i], soft_drop_count[i] * sizeof(piece_data));
-		result_count += soft_drop_count[i];
+	// For I, J, L, S, Z, O, T
+	for (int i = 0; i < harddrop_count; ++i) {
+		PieceData children[4];
+		int children_count = 0;
+
+		MoveGenerator::expand(board, harddrop[i], children, children_count);
+
+		for (int k = 0; k < children_count; ++k) {
+			if (board.is_above_stack(children[k])) continue;
+			children[k].y -= board.get_drop_distance(children[k]);
+			if (MoveGenerator::is_in(children[k], softdrop[0], softdrop_count[0], false) == -1) {
+				softdrop[0][softdrop_count[0]] = children[k];
+				++softdrop_count[0];
+			}
+		}
+	}
+	memcpy(result + result_count, softdrop[0], softdrop_count[0] * sizeof(PieceData));
+	result_count += softdrop_count[0];
+
+	// For T
+	if (piece == PIECE_T) {
+		for (int i = 0; i < softdrop_count[0]; ++i) {
+			PieceData children[4];
+			int children_count = 0;
+
+			MoveGenerator::expand(board, softdrop[0][i], children, children_count);
+
+			for (int k = 0; k < children_count; ++k) {
+				if (board.is_above_stack(children[k])) continue;
+				children[k].y -= board.get_drop_distance(children[k]);
+				if (MoveGenerator::is_in(children[k], softdrop[0], softdrop_count[0], false) == -1 &&
+					MoveGenerator::is_in(children[k], softdrop[1], softdrop_count[1], false) == -1) {
+					softdrop[1][softdrop_count[1]] = children[k];
+					++softdrop_count[1];
+				}
+			}
+		}
+		memcpy(result + result_count, softdrop[1], softdrop_count[1] * sizeof(PieceData));
+		result_count += softdrop_count[1];
 	}
 }
 
-/*
-* Generate new positions from a list of previous positions
-*/
-void genmove::generate_from_list(bitboard& board, piece_type piece, piece_data pre[MAX_MOVE_GEN_COUNT], int& pre_count, piece_data next[MAX_MOVE_GEN_COUNT], int& next_count)
-{
-	next_count = 0;
-
-	// Number of previous positions shouldn't be 0
-	if (pre_count == 0) return;
-
-	// Find new positions from previous positions
-	for (int i = 0; i < pre_count; ++i) {
-		piece_data simulating_piece_try_right = pre[i];
-		piece_data simulating_piece_try_left = pre[i];
-		piece_data simulating_piece_try_cw = pre[i];
-		piece_data simulating_piece_try_ccw = pre[i];
-
-		// Try move piece right
-		if (board.piece_try_right(simulating_piece_try_right)) {
-			if (!board.is_above_stack(simulating_piece_try_right)) {
-				board.piece_try_down(simulating_piece_try_right);
-				simulating_piece_try_right.soft_drop = true;
-				if (is_piece_in_list(simulating_piece_try_right, next, next_count) == -1) {
-					next[next_count] = simulating_piece_try_right;
-					++next_count;
-				}
-			}
-		}
-
-		// Try move piece left
-		if (board.piece_try_left(simulating_piece_try_left)) {
-			if (!board.is_above_stack(simulating_piece_try_left)) {
-				board.piece_try_down(simulating_piece_try_left);
-				simulating_piece_try_left.soft_drop = true;
-				if (is_piece_in_list(simulating_piece_try_left, next, next_count) == -1) {
-					next[next_count] = simulating_piece_try_left;
-					++next_count;
-				}
-			}
-		}
-
-		// Try rotate piece
-		if (piece != PIECE_O) {
-			// Try rotate piece cw
-			if (board.piece_try_rotate(simulating_piece_try_cw, true)) {
-				if (!board.is_above_stack(simulating_piece_try_cw)) {
-					board.piece_try_down(simulating_piece_try_cw);
-					simulating_piece_try_cw.soft_drop = true;
-					if (is_piece_in_list(simulating_piece_try_cw, next, next_count) == -1) {
-						next[next_count] = simulating_piece_try_cw;
-						++next_count;
-					}
-				}
-			}
-
-			// Try rotate piece ccw
-			if (board.piece_try_rotate(simulating_piece_try_ccw, false)) {
-				if (!board.is_above_stack(simulating_piece_try_ccw)) {
-					board.piece_try_down(simulating_piece_try_ccw);
-					simulating_piece_try_ccw.soft_drop = true;
-					if (is_piece_in_list(simulating_piece_try_ccw, next, next_count) == -1) {
-						next[next_count] = simulating_piece_try_ccw;
-						++next_count;
-					}
-				}
-			}
-		}
-
-		// If piece is I, S, Z, we have to mirror them to avoid missing new positions
-		if (piece == PIECE_I || piece == PIECE_S || piece == PIECE_Z) {
-			piece_data simulating_mirror_piece_try_cw = pre[i];
-			simulating_mirror_piece_try_cw.mirror();
-			piece_data simulating_mirror_piece_try_ccw = simulating_mirror_piece_try_cw;
-
-			// Try rotate piece cw
-			if (board.piece_try_rotate(simulating_mirror_piece_try_cw, true)) {
-				if (!board.is_above_stack(simulating_mirror_piece_try_cw)) {
-					board.piece_try_down(simulating_mirror_piece_try_cw);
-					simulating_mirror_piece_try_cw.soft_drop = true;
-					if (is_piece_in_list(simulating_mirror_piece_try_cw, next, next_count) == -1) {
-						next[next_count] = simulating_mirror_piece_try_cw;
-						++next_count;
-					}
-				}
-			}
-
-			// Try rotate piece ccw
-			if (board.piece_try_rotate(simulating_mirror_piece_try_ccw, false)) {
-				if (!board.is_above_stack(simulating_mirror_piece_try_ccw)) {
-					board.piece_try_down(simulating_mirror_piece_try_ccw);
-					simulating_mirror_piece_try_ccw.soft_drop = true;
-					if (is_piece_in_list(simulating_mirror_piece_try_ccw, next, next_count) == -1) {
-						next[next_count] = simulating_mirror_piece_try_ccw;
-						++next_count;
-					}
-				}
-			}
-		}
-	}
-}
-
-/*
-* Return index if current piece is already in list
-* Return -1 if false
-*/
-int genmove::is_piece_in_list(piece_data& piece, piece_data list[MAX_MOVE_GEN_COUNT], int& list_count)
+int MoveGenerator::is_in(PieceData& placement, PieceData list[MAX_MOVE_GENERATOR], int& list_count, bool exact)
 {
 	for (int i = 0; i < list_count; ++i) {
-		piece_data normalized_piece = piece;
-		normalized_piece.normalize();
-		piece_data normalized_piece_in_list = list[i];
-		normalized_piece_in_list.normalize();
-		if (normalized_piece == normalized_piece_in_list) return i;
+		if (exact) {
+			if (placement == list[i]) return i;
+		}
+		else {
+			PieceData normalized_piece = placement;
+			normalized_piece.normalize();
+			PieceData normalized_piece_in_list = list[i];
+			normalized_piece_in_list.normalize();
+			if (normalized_piece == normalized_piece_in_list) return i;
+		}
 	}
 	return -1;
+}
+
+void MoveGenerator::expand(BitBoard& board, PieceData& piece, PieceData result[4], int& result_count)
+{
+	result_count = 0;
+
+	PieceData right = piece;
+	PieceData left = piece;
+
+	if (board.piece_try_right(right)) {
+		result[result_count] = right;
+		++result_count;
+	}
+
+	if (board.piece_try_left(left)) {
+		result[result_count] = left;
+		++result_count;
+	}
+
+	if (piece.type != PIECE_O) {
+		PieceData cw = piece;
+		PieceData ccw = piece;
+
+		if (board.piece_try_rotate(cw, true)) {
+			result[result_count] = cw;
+			++result_count;
+		}
+
+		if (board.piece_try_rotate(ccw, false)) {
+			result[result_count] = ccw;
+			++result_count;
+		}
+	}
 }

@@ -1,5 +1,4 @@
-#ifndef DEF_H
-#define DEF_H
+#pragma once
 
 #include <iostream>
 #include <stdio.h>
@@ -7,6 +6,7 @@
 #include <time.h>
 #include <chrono>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <bitset>
 #include <bit>
@@ -20,7 +20,7 @@
 
 #include "vec.h"
 
-enum piece_type : int
+enum PieceType : int
 {
 	PIECE_I,
 	PIECE_J,
@@ -32,7 +32,7 @@ enum piece_type : int
 	PIECE_NONE
 };
 
-enum piece_rotation : int
+enum PieceRotation : int
 {
 	PIECE_UP,
 	PIECE_RIGHT,
@@ -40,7 +40,7 @@ enum piece_rotation : int
 	PIECE_LEFT
 };
 
-enum lock_data : int
+enum LockData : int
 {
 	LOCK_NONE,
 	LOCK_CLEAR_1,
@@ -53,7 +53,7 @@ enum lock_data : int
 	LOCK_PC
 };
 
-enum move_type : int
+enum MoveType : int
 {
 	MOVE_RIGHT,
 	MOVE_LEFT,
@@ -63,9 +63,9 @@ enum move_type : int
 };
 
 /*
-* NOTE TO SELF: piece_def_lut [ PIECE_INDEX ] [ PIECE_ROTATION_STATE ] [ CELL_INDEX ] [ CELL_X / CELL_Y ];
+* NOTE TO SELF: piece_lut [ PIECE_INDEX ] [ PIECE_ROTATION_STATE ] [ CELL_INDEX ] [ CELL_X / CELL_Y ];
 */
-constexpr int piece_def_lut[7][4][4][2] =
+constexpr int PIECE_LUT[7][4][4][2] =
 {
 	// PIECE I
 	{
@@ -126,10 +126,10 @@ constexpr int piece_def_lut[7][4][4][2] =
 
 /*
 * NOTE TO SELF
-*  - only 2 tables for I piece and the others, O piece can't to rotate
-*  - piece_srs_lut [ 0 - PIECE_I, 1 - OTHERS ] [ PIECE_ROTATION_STATE ] [ OFFSET_INDEX ] [ CELL_X / CELL_Y ];
+*  - only 2 tables for I piece and the others, O piece can't rotate
+*  - srs_lut [ 0 - PIECE_I, 1 - OTHERS ] [ PIECE_ROTATION_STATE ] [ OFFSET_INDEX ] [ CELL_X / CELL_Y ];
 */
-constexpr int piece_srs_lut[2][4][5][2] =
+constexpr int SRS_LUT[2][4][5][2] =
 {
 	// PIECE I
 	{
@@ -148,4 +148,21 @@ constexpr int piece_srs_lut[2][4][5][2] =
 	}
 };
 
-#endif // DEF_H
+/*
+* Combo table
+* NOTE TO SELF: REN_LUT[state.ren]
+*/
+constexpr int MAX_COMBO_TABLE_SIZE = 10;
+constexpr int REN_LUT[MAX_COMBO_TABLE_SIZE] =
+{
+	0,
+	0,
+	1,
+	1,
+	2,
+	2,
+	3,
+	3,
+	3,
+	3
+};

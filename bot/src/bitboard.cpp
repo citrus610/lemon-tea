@@ -1,25 +1,27 @@
 #include "bitboard.h"
 
-void bitboard::get_height(int height[10])
+void BitBoard::get_height(int height[10])
 {
 	for (int i = 0; i < 10; ++i) {
 		height[i] = 64 - std::countl_zero(column[i]);
 	}
 }
 
-int bitboard::get_drop_distance(piece_data& piece)
+int BitBoard::get_drop_distance(PieceData& piece)
 {
 	int result = 64;
-
 	for (int i = 0; i < 4; ++i) {
-		int cell_distance = piece.y + piece_def_lut[piece.type][piece.rotation][i][1] - (64 - std::countl_zero(column[piece.x + piece_def_lut[piece.type][piece.rotation][i][0]]));
+		int cell_distance = piece.y + PIECE_LUT[piece.type][piece.rotation][i][1] - 64 +
+			std::countl_zero(
+				column[piece.x + PIECE_LUT[piece.type][piece.rotation][i][0]] &
+				(((uint64_t)1 << (piece.y + PIECE_LUT[piece.type][piece.rotation][i][1])) - 1)
+			);
 		result = std::min(result, cell_distance);
 	}
-
 	return result;
 }
 
-uint64_t bitboard::get_mask()
+uint64_t BitBoard::get_mask()
 {
 	uint64_t result = column[0];
 	for (int i = 1; i < 10; ++i)
@@ -27,7 +29,7 @@ uint64_t bitboard::get_mask()
 	return result;
 }
 
-int bitboard::clear_line()
+int BitBoard::clear_line()
 {
 	int result;
 
@@ -86,26 +88,26 @@ int bitboard::clear_line()
 	return result;
 }
 
-bool bitboard::is_occupied(const int& x, const int& y)
+bool BitBoard::is_occupied(const int& x, const int& y)
 {
 	if (x < 0 || x > 9 || y < 0 || y > 39) return true;
 	return (column[x] & ((uint64_t)0b1 << y)) != 0;
 }
 
-bool bitboard::is_colliding(const int& x, const int& y, const piece_type& type, const piece_rotation& rotation)
+bool BitBoard::is_colliding(const int& x, const int& y, const PieceType& type, const PieceRotation& rotation)
 {
 	for (int i = 0; i < 4; ++i) {
-		if (is_occupied(piece_def_lut[type][rotation][i][0] + x, piece_def_lut[type][rotation][i][1] + y)) return true;
+		if (is_occupied(PIECE_LUT[type][rotation][i][0] + x, PIECE_LUT[type][rotation][i][1] + y)) return true;
 	}
 	return false;
 }
 
-bool bitboard::is_above_stack(piece_data& piece)
+bool BitBoard::is_above_stack(PieceData& piece)
 {
 	for (int i = 0; i < 4; ++i) {
-		if ((piece_def_lut[piece.type][piece.rotation][i][1] + piece.y) // current cell y position
+		if ((PIECE_LUT[piece.type][piece.rotation][i][1] + piece.y) // current cell y position
 			< // smaller than
-			(64 - std::countl_zero(column[piece_def_lut[piece.type][piece.rotation][i][0] + piece.x])) // current column height
+			(64 - std::countl_zero(column[PIECE_LUT[piece.type][piece.rotation][i][0] + piece.x])) // current column height
 			) {
 			return false;
 		}
@@ -113,14 +115,9 @@ bool bitboard::is_above_stack(piece_data& piece)
 	return true;
 }
 
-bool bitboard::is_t_spin(piece_data& piece)
+bool BitBoard::is_t_spin(PieceData& piece)
 {
 	if (piece.type == PIECE_T) {
-		//int corner_count = 
-		//	is_occupied(piece.x + 1, piece.y + 1) + 
-		//	is_occupied(piece.x + 1, piece.y - 1) + 
-		//	is_occupied(piece.x - 1, piece.y - 1) + 
-		//	is_occupied(piece.x - 1, piece.y + 1);
 		switch (piece.rotation)
 		{
 		case PIECE_UP:
@@ -135,9 +132,9 @@ bool bitboard::is_t_spin(piece_data& piece)
 				(is_occupied(piece.x + 1, piece.y - 1) + is_occupied(piece.x - 1, piece.y - 1) + is_occupied(piece.x - 1, piece.y + 1) >= 2);
 			break;
 		case PIECE_DOWN:
-			return 
-				is_occupied(piece.x - 1, piece.y - 1) && 
-				is_occupied(piece.x + 1, piece.y - 1) && 
+			return
+				is_occupied(piece.x - 1, piece.y - 1) &&
+				is_occupied(piece.x + 1, piece.y - 1) &&
 				(is_occupied(piece.x - 1, piece.y + 1) || is_occupied(piece.x + 1, piece.y + 1));
 			break;
 		case PIECE_LEFT:
@@ -153,37 +150,37 @@ bool bitboard::is_t_spin(piece_data& piece)
 	return false;
 }
 
-void bitboard::place_piece(piece_data& piece)
+void BitBoard::place_piece(PieceData& piece)
 {
 	for (int i = 0; i < 4; ++i) {
-		column[piece_def_lut[piece.type][piece.rotation][i][0] + piece.x] |= ((uint64_t)0b1 << (piece_def_lut[piece.type][piece.rotation][i][1] + piece.y));
+		column[PIECE_LUT[piece.type][piece.rotation][i][0] + piece.x] |= ((uint64_t)0b1 << (PIECE_LUT[piece.type][piece.rotation][i][1] + piece.y));
 	}
 }
 
-bool bitboard::piece_try_right(piece_data& piece)
+bool BitBoard::piece_try_right(PieceData& piece)
 {
 	int pre_x = piece.x;
 	piece.x += !is_colliding(piece.x + 1, piece.y, piece.type, piece.rotation);
 	return piece.x != pre_x;
 }
 
-bool bitboard::piece_try_left(piece_data& piece)
+bool BitBoard::piece_try_left(PieceData& piece)
 {
 	int pre_x = piece.x;
 	piece.x -= !is_colliding(piece.x - 1, piece.y, piece.type, piece.rotation);
 	return piece.x != pre_x;
 }
 
-bool bitboard::piece_try_rotate(piece_data& piece, bool is_cw)
+bool BitBoard::piece_try_rotate(PieceData& piece, bool is_cw)
 {
 	// O piece should not be here
 	// assert(piece.type != PIECE_O);
 
-	piece_rotation new_rotation = (piece_rotation)(((int)piece.rotation + (!is_cw * 2 + 1)) % 4);
+	PieceRotation new_rotation = (PieceRotation)(((int)piece.rotation + (!is_cw * 2 + 1)) % 4);
 	int srs_piece_index = std::min((int)piece.type, 1);
 	for (int i = 0; i < 5; ++i) {
-		int offset_x = piece_srs_lut[srs_piece_index][piece.rotation][i][0] - piece_srs_lut[srs_piece_index][new_rotation][i][0];
-		int offset_y = piece_srs_lut[srs_piece_index][piece.rotation][i][1] - piece_srs_lut[srs_piece_index][new_rotation][i][1];
+		int offset_x = SRS_LUT[srs_piece_index][piece.rotation][i][0] - SRS_LUT[srs_piece_index][new_rotation][i][0];
+		int offset_y = SRS_LUT[srs_piece_index][piece.rotation][i][1] - SRS_LUT[srs_piece_index][new_rotation][i][1];
 		if (!is_colliding(piece.x + offset_x, piece.y + offset_y, piece.type, new_rotation)) {
 			piece.x += offset_x;
 			piece.y += offset_y;
@@ -194,7 +191,7 @@ bool bitboard::piece_try_rotate(piece_data& piece, bool is_cw)
 	return false;
 }
 
-bool bitboard::piece_try_down(piece_data& piece)
+bool BitBoard::piece_try_down(PieceData& piece)
 {
 	int pre_y = piece.y;
 	while (!is_colliding(piece.x, piece.y - 1, piece.type, piece.rotation)) --piece.y;
@@ -205,7 +202,7 @@ bool bitboard::piece_try_down(piece_data& piece)
 * Convert the I, Z, S pieces to their default forms
 * Useful in move generator
 */
-void piece_data::normalize()
+void PieceData::normalize()
 {
 	switch (type)
 	{
@@ -227,26 +224,6 @@ void piece_data::normalize()
 		default:
 			break;
 		}
-		break;
-	case PIECE_O:
-		switch (rotation)
-		{
-		case PIECE_UP:
-			break;
-		case PIECE_RIGHT:
-			--y;
-			break;
-		case PIECE_DOWN:
-			--x;
-			--y;
-			break;
-		case PIECE_LEFT:
-			--x;
-			break;
-		default:
-			break;
-		}
-		rotation = PIECE_UP;
 		break;
 	case PIECE_S:
 		switch (rotation)
@@ -295,7 +272,7 @@ void piece_data::normalize()
 * Convert the I, Z, S pieces to their alternative forms
 * Useful in move generator
 */
-void piece_data::mirror()
+void PieceData::mirror()
 {
 	switch (type)
 	{

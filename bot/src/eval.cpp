@@ -1,140 +1,211 @@
 #include "eval.h"
 
-int eval::evaluate(node& node, piece_type* queue, int& queue_count)
+void Weight::standard()
 {
-	int score = 0;
-	bitboard board = node.board;
+	attack.clear[0] = -200;
+	attack.clear[1] = -150;
+	attack.clear[2] = -100;
+	attack.clear[3] = 400;
+	attack.tspin[0] = 50;
+	attack.tspin[1] = 400;
+	attack.tspin[2] = 600;
+	attack.perfect_clear = 1000;
+	attack.ren = 100;
+	attack.waste_time = -150;
+	attack.waste_T = -150;
+	attack.waste_I = -100;
+
+	defence.max_height = -35;
+	defence.max_height_top_half = -150;
+	defence.max_height_top_quarter = -500;
+	defence.bumpiness = -24;
+	defence.bumpiness_s = -7;
+	defence.bumpiness_t = -12;
+	defence.hole = -200;
+	defence.blocked = -35;
+	defence.well = 55;
+	defence.well_position[0] = 20;
+	defence.well_position[1] = 20;
+	defence.well_position[2] = 20;
+	defence.well_position[3] = 40;
+	defence.well_position[4] = 40;
+	defence.well_position[5] = 40;
+	defence.well_position[6] = 40;
+	defence.well_position[7] = 20;
+	defence.well_position[8] = 20;
+	defence.well_position[9] = 20;
+	defence.structure[0] = 8;
+	defence.structure[1] = 100;
+	defence.b2b = 100;
+	defence.ren = 10;
+}
+
+void Evaluator::evaluate(Node& node, PieceType* queue, int& queue_count)
+{
+	/*
+	* Defence evaluation
+	*/
+	node.score.defence = 0;
+	BitBoard board = node.state.board;
 
 	// Get column heights
 	int column_height[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	board.get_height(column_height);
 
-	// Structure
-	eval::structure(board, column_height, node.structure);
-	if (node.lock != LOCK_TSPIN_1 && node.lock != LOCK_TSPIN_2 && node.lock != LOCK_TSPIN_3) {
-		node.waste_structure[0] += std::min(0, node.pre_structure[0] - node.structure[0]);
-		node.waste_structure[1] += std::min(0, node.pre_structure[1] - node.structure[1]);
+	//Structure
+	PieceData t_struct = Evaluator::structure(board, column_height);
+	if (t_struct.type != PIECE_NONE) {
+		if (t_struct.rotation == PIECE_DOWN) {
+			node.score.defence += this->weight.defence.structure[0];
+		}
+		else {
+			node.score.defence += this->weight.defence.structure[1];
+		}
 	}
-	score += node.structure[0] * heuristic.structure[0];
-	score += node.structure[1] * heuristic.structure[1];
-	score += node.waste_structure[0] * heuristic.waste_structure[0];
-	score += node.waste_structure[1] * heuristic.waste_structure[1];
 
-	// Max height
+	// Height
 	int max_height = *std::max_element(column_height, column_height + 10);
-	score += max_height * heuristic.max_height;
-	score += std::max(max_height - 10, 0) * heuristic.max_height_top_half;
-	score += std::max(max_height - 15, 0) * heuristic.max_height_top_quarter;
+	node.score.defence += max_height * this->weight.defence.max_height;
+	node.score.defence += std::max(max_height - 10, 0) * this->weight.defence.max_height_top_half;
+	node.score.defence += std::max(max_height - 15, 0) * this->weight.defence.max_height_top_quarter;
 
 	// Quiescence
-	int quiescence_depth_T = (node.current == PIECE_T) + (node.hold == PIECE_T) + std::count(queue + node.next, queue + node.next + std::min(3, queue_count - node.next), PIECE_T);
-	eval::quiescence(board, column_height, quiescence_depth_T);
+	int quiescence_depth = (node.state.current == PIECE_T) + (node.state.hold == PIECE_T);
+	for (int i = node.state.next; i < std::min(queue_count, node.state.next + 3); ++i) {
+		quiescence_depth += queue[i] == PIECE_T;
+	}
+	bool quiescence = Evaluator::quiescence(board, column_height, quiescence_depth);
 
 	// Well
-	int well_index = -1;
-	int well_depth = eval::well(board, column_height, well_index);
-	well_depth = std::min(well_depth, 15);
-	score += well_depth * heuristic.well;
-	if (well_index == 0 || well_index == 9)
-		score += well_depth * heuristic.well_index[0]; // Well 1 - 10
-	else if (well_index == 1 || well_index == 8)
-		score += well_depth * heuristic.well_index[1]; // Well 2 - 8
-	else if (well_index == 2 || well_index == 7)
-		score += well_depth * heuristic.well_index[2]; // Well 3 - 7
-	else
-		score += well_depth * heuristic.well_index[3]; // Well center
+	int well_position = 0;
+	int well_depth = Evaluator::well(board, column_height, well_position);
+	node.score.defence += well_depth * this->weight.defence.well;
+	node.score.defence += well_depth * this->weight.defence.well_position[well_position];
 
 	// Bumpiness
-	int bumpiness[3] = { 0, 0, 0 };
-	eval::bumpiness(column_height, well_index, bumpiness);
-	score += bumpiness[0] * heuristic.bumpiness;
-	score += bumpiness[1] * heuristic.bumpiness_s;
-	score += bumpiness[2] * heuristic.bumpiness_t;
-
-	// Blocked cells
-	int blocked_cell = eval::blocked_cell(board, column_height);
-	score += blocked_cell * heuristic.blocked_cell;
-	score += blocked_cell * blocked_cell * heuristic.blocked_cell_s;
+	int bumpiness[3];
+	Evaluator::bumpiness(column_height, well_position, bumpiness);
+	node.score.defence += bumpiness[0] * this->weight.defence.bumpiness;
+	node.score.defence += bumpiness[1] * this->weight.defence.bumpiness_s;
+	node.score.defence += bumpiness[2] * this->weight.defence.bumpiness_t;
 
 	// Hole
-	int hole = eval::hole(board, column_height);
-	score += hole * heuristic.hole;
-	score += hole * hole * heuristic.hole_s;
+	int hole = Evaluator::hole(board, column_height);
+	node.score.defence += hole * this->weight.defence.hole;
 
-	// Block above hole
-	int block_above_hole[2] = { 0, 0 };
-	eval::block_above_hole(board, column_height, block_above_hole);
-	score += block_above_hole[0] * heuristic.block_above_hole;
-	score += block_above_hole[1] * heuristic.block_above_hole_s;
+	// Blocked hole
+	int blocked = Evaluator::blocked(board, column_height);
+	node.score.defence += blocked * this->weight.defence.blocked;
 
 	// B2B
-	score += node.b2b * heuristic.b2b_chain;
-	score += node.max_b2b * heuristic.b2b_max_chain;
+	node.score.defence += node.state.b2b * this->weight.defence.b2b;
 
-	// REN
-	score += node.ren * heuristic.ren_chain;
-	score += node.max_ren * heuristic.ren_max_chain;
-	score += node.max_ren * node.max_ren / 5 * heuristic.ren_acc_chain;
+	// Ren
+	node.score.defence += node.state.ren * this->weight.defence.ren;
 
-	// Perfect clear
-	score += node.pc * heuristic.perfect_clear;
 
-	// T spin
-	score += node.tspin[0] * heuristic.t_spin[0]; // T spin single
-	score += node.tspin[1] * heuristic.t_spin[1]; // T spin double
-	score += node.tspin[2] * heuristic.t_spin[2]; // T spin triple
+	/*
+	* Attack evaluation
+	*/
+	// Attacks
+	switch (node.action.lock)
+	{
+	case LOCK_CLEAR_1:
+		node.score.attack += this->weight.attack.clear[0];
+		break;
+	case LOCK_CLEAR_2:
+		node.score.attack += this->weight.attack.clear[1];
+		break;
+	case LOCK_CLEAR_3:
+		node.score.attack += this->weight.attack.clear[2];
+		break;
+	case LOCK_CLEAR_4:
+		node.score.attack += this->weight.attack.clear[3];
+		break;
+	case LOCK_TSPIN_1:
+		node.score.attack += this->weight.attack.tspin[0];
+		break;
+	case LOCK_TSPIN_2:
+		node.score.attack += this->weight.attack.tspin[1];
+		break;
+	case LOCK_TSPIN_3:
+		node.score.attack += this->weight.attack.tspin[2];
+		break;
+	case LOCK_PC:
+		node.score.attack += this->weight.attack.perfect_clear;
+		break;;
+	default:
+		break;
+	}
 
-	// Clear lines
-	score += node.clear[0] * heuristic.clear[0]; // Burn 1 line
-	score += node.clear[1] * heuristic.clear[1]; // Burn 2 lines
-	score += node.clear[2] * heuristic.clear[2]; // Burn 3 lines
-	score += node.clear[3] * heuristic.clear[3]; // Tetris
-
-	// Waste pieces
-	score += node.waste_I * heuristic.waste_I;
-	score += node.waste_T * heuristic.waste_T;
+	// Ren
+	node.score.attack += REN_LUT[std::min(node.state.ren, MAX_COMBO_TABLE_SIZE - 1)] * this->weight.attack.ren;
 
 	// Waste time
-	if (node.is_soft_srop && node.lock != LOCK_TSPIN_1 && node.lock != LOCK_TSPIN_2 && node.lock != LOCK_TSPIN_3 && node.lock != LOCK_PC)
-		++node.waste_time;
-	if (node.lock == LOCK_CLEAR_1 || node.lock == LOCK_CLEAR_2 || node.lock == LOCK_CLEAR_3)
-		++node.waste_time;
-	score += node.waste_time * heuristic.waste_time;
+	if (node.action.soft_drop &&
+		node.action.lock != LOCK_TSPIN_1 &&
+		node.action.lock != LOCK_TSPIN_2 &&
+		node.action.lock != LOCK_TSPIN_3 &&
+		node.action.lock != LOCK_PC)
+		node.score.attack += this->weight.attack.waste_time;
+	if (node.action.lock == LOCK_CLEAR_1 ||
+		node.action.lock == LOCK_CLEAR_2 ||
+		node.action.lock == LOCK_CLEAR_3)
+		node.score.attack += this->weight.attack.waste_time;
 
-	return score;
+	// Waste T
+	if (node.action.placement.type == PIECE_T &&
+		node.action.lock != LOCK_TSPIN_1 &&
+		node.action.lock != LOCK_TSPIN_2 &&
+		node.action.lock != LOCK_TSPIN_3 &&
+		node.action.lock != LOCK_PC) {
+		node.score.attack += this->weight.attack.waste_T;
+	}
+	if (quiescence &&
+		node.state.hold == PIECE_T) {
+		node.score.attack += this->weight.attack.waste_T;
+	}
+
+	// Waste I
+	if (node.action.placement.type == PIECE_I &&
+		node.action.lock != LOCK_CLEAR_4 &&
+		node.action.lock != LOCK_PC) {
+		node.score.attack += this->weight.attack.waste_I;
+	}
+	if (well_depth >= 4 &&
+		node.state.hold == PIECE_I) {
+		node.score.attack += this->weight.attack.waste_I;
+	}
 }
 
-int eval::well(bitboard& board, int column_height[10], int& well_index)
+int Evaluator::well(BitBoard& board, int column_height[10], int& well_position)
 {
-	// Find well index - index of lowest column
-	int* min_height_ptr = std::min_element(column_height, column_height + 10);
-	int min_height = *min_height_ptr;
-	well_index = (int)(min_height_ptr - column_height);
+	well_position = 0;
+	for (int i = 1; i < 10; ++i) {
+		if (column_height[i] < column_height[well_position]) {
+			well_position = i;
+		}
+	}
 
-	// Find well depth
 	uint64_t mask = ~0b0;
 	for (int i = 0; i < 10; ++i) {
-		if (i == well_index) continue;
+		if (i == well_position) continue;
 		mask = mask & board.column[i];
 	}
-	mask = mask << min_height;
-	return std::countr_one(mask);
+	mask = mask >> column_height[well_position];
+	return std::min(std::countr_one(mask), 8);
 }
 
-void eval::bumpiness(int column_height[10], int well_index, int result[3])
+void Evaluator::bumpiness(int column_height[10], int well_index, int result[3])
 {
-	result[0] = 0; result[1] = 0; result[2] = 0;
+	result[0] = 0;
+	result[1] = 0;
+	result[2] = 0;
 	for (int i = 0; i < 9; ++i) {
 		if (i == well_index - 1 || i == well_index) continue;
 		result[0] += std::abs(column_height[i] - column_height[i + 1]);
 		result[1] += (column_height[i] - column_height[i + 1]) * (column_height[i] - column_height[i + 1]);
 		result[2] += (column_height[i] != column_height[i + 1]);
-		//}
-		//else if (i == well_index - 1 && well_index != 9) {
-		//	result[0] += std::abs(column_height[i] - column_height[i + 2]);
-		//	result[1] += (column_height[i] - column_height[i + 2]) * (column_height[i] - column_height[i + 2]);
-		//	result[2] += (column_height[i] != column_height[i + 2]);
-		//}
 	}
 	if (well_index != 0 && well_index != 9) {
 		result[0] += std::abs(column_height[well_index - 1] - column_height[well_index + 1]);
@@ -143,7 +214,7 @@ void eval::bumpiness(int column_height[10], int well_index, int result[3])
 	}
 }
 
-int eval::blocked_cell(bitboard& board, int column_height[10])
+int Evaluator::hole(BitBoard& board, int column_height[10])
 {
 	int result = 0;
 	for (int i = 0; i < 10; ++i) {
@@ -152,180 +223,107 @@ int eval::blocked_cell(bitboard& board, int column_height[10])
 	return result;
 }
 
-/*
-* A hole is an empty cell which is fully blocked up, left and right
-*/
-int eval::hole(bitboard& board, int column_height[10])
+int Evaluator::blocked(BitBoard& board, int column_height[10])
 {
 	int result = 0;
 	for (int i = 0; i < 10; ++i) {
-		// If there aren't any holes, then skip
-		if ((board.column[i] & (board.column[i] + 1)) == 0) continue;
-
-		// Count holes
-		int acc_l_zero_and_l_one = 0;
-		while (true)
+		uint64_t hole_mask = (~board.column[i]) & (((uint64_t)1 << column_height[i]) - 1);
+		while (hole_mask != 0)
 		{
-			uint64_t column = board.column[i] << acc_l_zero_and_l_one;
-			int column_l_zero_cnt = std::countl_zero(column);
-			acc_l_zero_and_l_one += column_l_zero_cnt + std::countl_one(column << column_l_zero_cnt);
-			if (63 - acc_l_zero_and_l_one < 0) break;
-			if (board.is_occupied(i - 1, 63 - acc_l_zero_and_l_one) && board.is_occupied(i + 1, 63 - acc_l_zero_and_l_one))
-				++result;
+			int hole_mask_trz = std::countr_zero(hole_mask);
+			result += std::min(column_height[i] - hole_mask_trz - 1, 6);
+			hole_mask = hole_mask & (~((uint64_t)1 << hole_mask_trz));
 		}
-
 	}
 	return result;
 }
 
-void eval::block_above_hole(bitboard& board, int column_height[10], int result[2])
+
+PieceData Evaluator::structure(BitBoard& board, int column_height[10])
 {
-	result[0] = 0; result[1] = 0;
-	for (int i = 0; i < 10; ++i) {
-		// If there aren't any holes, then skip
-		if ((board.column[i] & (board.column[i] + 1)) == 0) continue;
-
-		// shift column << (64 - column_height)
-		// reverse bit ~
-		// block above hole = count lead zero
-		int block_above_hole_count = std::countl_zero(~(board.column[i] << (64 - column_height[i])));
-
-		result[0] += block_above_hole_count;
-		result[1] += block_above_hole_count * block_above_hole_count;
-	}
-}
-
-void eval::structure(bitboard& board, int column_height[10], int result[2])
-{
-	result[0] = 0; result[1] = 0;
 	for (int _x = 0; _x < 8; ++_x) {
-		// If column height somewhat resemble t spin structure, then check
-		// If check structure true, then sweet!
-		// Else move on
-
-		// TSD
 		if (column_height[_x + 0] > column_height[_x + 1] && column_height[_x + 0] + 1 < column_height[_x + 2]) {
 			if (((board.column[_x + 0] >> (column_height[_x + 0] - 1)) & 0b111) == 0b001 &&
 				((board.column[_x + 1] >> (column_height[_x + 0] - 1)) & 0b111) == 0b000 &&
 				((board.column[_x + 2] >> (column_height[_x + 0] - 1)) & 0b111) == 0b101) {
-				++result[0];
-				_x += 2;
+				return {
+					_x + 1,
+					column_height[_x + 0],
+					PIECE_T,
+					PIECE_DOWN
+				};
 			}
 		}
-		else
-			if (column_height[_x + 2] > column_height[_x + 1] && column_height[_x + 2] + 1 < column_height[_x + 0]) {
-				if (((board.column[_x + 0] >> (column_height[_x + 2] - 1)) & 0b111) == 0b101 &&
-					((board.column[_x + 1] >> (column_height[_x + 2] - 1)) & 0b111) == 0b000 &&
-					((board.column[_x + 2] >> (column_height[_x + 2] - 1)) & 0b111) == 0b001) {
-					++result[0];
-					_x += 2;
-				}
+		if (column_height[_x + 2] > column_height[_x + 1] && column_height[_x + 2] + 1 < column_height[_x + 0]) {
+			if (((board.column[_x + 0] >> (column_height[_x + 2] - 1)) & 0b111) == 0b101 &&
+				((board.column[_x + 1] >> (column_height[_x + 2] - 1)) & 0b111) == 0b000 &&
+				((board.column[_x + 2] >> (column_height[_x + 2] - 1)) & 0b111) == 0b001) {
+				return {
+					_x + 1,
+					column_height[_x + 2],
+					PIECE_T,
+					PIECE_DOWN
+				};
 			}
-		// TST or STSD
-			else
-				if (column_height[_x + 1] >= column_height[_x + 0] && column_height[_x + 1] + 1 < column_height[_x + 2]) {
-					if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000 &&
-						((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
-						((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000) {
-						++result[1];
-						_x += 2;
-					}
-				}
-				else
-					if (column_height[_x + 1] >= column_height[_x + 2] && column_height[_x + 1] + 1 < column_height[_x + 0]) {
-						if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000 &&
-							((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
-							((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000) {
-							++result[1];
-							_x += 2;
-						}
-					}
+		}
+		if (column_height[_x + 1] >= column_height[_x + 0] && column_height[_x + 1] + 1 < column_height[_x + 2]) {
+			if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000 &&
+				((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
+				((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000 &&
+				(
+					board.is_occupied(_x + 1, column_height[_x + 1] - 3) ||
+					(!board.is_occupied(_x + 1, column_height[_x + 1] - 3) && board.is_occupied(_x + 2, column_height[_x + 1] - 4))
+					)) {
+				return {
+					_x + 2,
+					column_height[_x + 1] - 2,
+					PIECE_T,
+					PIECE_LEFT
+				};
+			}
+		}
+		if (column_height[_x + 1] >= column_height[_x + 2] && column_height[_x + 1] + 1 < column_height[_x + 0]) {
+			if (((board.column[_x + 0] >> (column_height[_x + 1] - 3)) & 0b11111) == 0b10000 &&
+				((board.column[_x + 1] >> (column_height[_x + 1] - 3)) & 0b11110) == 0b00100 &&
+				((board.column[_x + 2] >> (column_height[_x + 1] - 3)) & 0b11000) == 0b00000 &&
+				(
+					board.is_occupied(_x + 1, column_height[_x + 1] - 3) ||
+					(!board.is_occupied(_x + 1, column_height[_x + 1] - 3) && board.is_occupied(_x + 0, column_height[_x + 1] - 4))
+					)) {
+				return {
+					_x + 0,
+					column_height[_x + 1] - 2,
+					PIECE_T,
+					PIECE_RIGHT
+				};
+			}
+		}
 	}
+	return {
+		-1,
+		-1,
+		PIECE_NONE,
+		PIECE_UP
+	};
 }
 
-void eval::quiescence(bitboard& board, int column_height[10], int depth_T)
+bool Evaluator::quiescence(BitBoard& board, int column_height[10], int depth)
 {
-	// Check t spin double
-	for (int i = 0; i < depth_T; ++i) {
-		bitboard copy = board;
-		int struct_x = -1;
-		int struct_y = -1;
-		for (int _x = 0; _x < 8; ++_x) {
-			if (column_height[_x + 0] > column_height[_x + 1] && column_height[_x + 0] + 1 < column_height[_x + 2]) {
-				if (((board.column[_x + 0] >> (column_height[_x + 0] - 1)) & 0b111) == 0b001 &&
-					((board.column[_x + 1] >> (column_height[_x + 0] - 1)) & 0b111) == 0b000 &&
-					((board.column[_x + 2] >> (column_height[_x + 0] - 1)) & 0b111) == 0b101) {
-					struct_x = _x + 1;
-					struct_y = column_height[_x + 0];
-					break;
-				}
-			}
-			else
-				if (column_height[_x + 2] > column_height[_x + 1] && column_height[_x + 2] + 1 < column_height[_x + 0]) {
-					if (((board.column[_x + 0] >> (column_height[_x + 2] - 1)) & 0b111) == 0b101 &&
-						((board.column[_x + 1] >> (column_height[_x + 2] - 1)) & 0b111) == 0b000 &&
-						((board.column[_x + 2] >> (column_height[_x + 2] - 1)) & 0b111) == 0b001) {
-						struct_x = _x + 1;
-						struct_y = column_height[_x + 2];
-						break;
-					}
-				}
-		}
-		if (struct_x == -1 || struct_y == -1) break;
-		piece_data quiet_piece = { struct_x, struct_y, PIECE_T, PIECE_DOWN, true };
+	bool result = false;
+	for (int i = 0; i < depth; ++i) {
+		BitBoard copy = board;
+		PieceData quiet_piece = Evaluator::structure(copy, column_height);
+		if (quiet_piece.type == PIECE_NONE) break;
 		copy.place_piece(quiet_piece);
 		int line_clear = copy.clear_line();
 		if (line_clear >= 2) {
 			board = copy;
 			board.get_height(column_height);
+			result = true;
 		}
-		else
-		{
+		else {
 			break;
 		}
 	}
-}
-
-/*
-* Set the weight to standard set
-*/
-void weight::standard()
-{
-	max_height = -39;
-	max_height_top_half = -150;
-	max_height_top_quarter = -611;
-	bumpiness = -24;
-	bumpiness_s = -7;
-	bumpiness_t = -32;
-	hole = -173;
-	hole_s = -3;
-	blocked_cell = -34;
-	blocked_cell_s = -1;
-	block_above_hole = -17;
-	block_above_hole_s = -1;
-	well = 57;
-	well_index[0] = 10;
-	well_index[1] = 10;
-	well_index[2] = 12;
-	well_index[3] = 30;
-	structure[0] = 8;
-	structure[1] = 148;
-	waste_structure[0] = -152;
-	waste_structure[1] = -152;
-	b2b_chain = 56;
-	b2b_max_chain = 52;
-	ren_chain = 12;
-	ren_max_chain = 54;
-	ren_acc_chain = 104;
-	clear[0] = -173;
-	clear[1] = -122;
-	clear[2] = -88;
-	clear[3] = 390;
-	t_spin[0] = 121;
-	t_spin[1] = 482;
-	t_spin[2] = 682;
-	perfect_clear = 999;
-	waste_time = -162;
-	waste_T = -152;
-	waste_I = -97;
+	return result;
 }

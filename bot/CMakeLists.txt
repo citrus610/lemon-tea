@@ -9,11 +9,10 @@ project ("bot")
 # create a sources variable with a link to all cpp files to compile
 set(SOURCES
     src/bitboard.cpp
-    src/node.cpp
     src/eval.cpp
     src/genmove.cpp
     src/pathfinder.cpp
-    src/beam.cpp
+    src/tree.cpp
     src/bot.cpp
 )
 
