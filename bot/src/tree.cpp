@@ -63,13 +63,9 @@ void Tree::set(BitBoard board, PieceType current, PieceType hold, PieceType next
 bool Tree::advance(Action& action, PieceType new_piece[MAX_TREE_QUEUE], int new_piece_count)
 {
 	// Check if action is valid
-	if (this->root.state.board.is_colliding(action.placement.x, action.placement.y, action.placement.type, action.placement.rotation) ||
+	if (action.placement.type == PIECE_NONE ||
+		this->root.state.board.is_colliding(action.placement.x, action.placement.y, action.placement.type, action.placement.rotation) ||
 		this->root.state.board.get_drop_distance(action.placement) != 0) {
-		//std::cout << "Invalid action!" << std::endl;
-		//std::cout << "    + Action X:        " << action.placement.x << std::endl;
-		//std::cout << "    + Action Y:        " << action.placement.y << std::endl;
-		//std::cout << "    + Action Type:     " << action.placement.type << std::endl;
-		//std::cout << "    + Action Rotation: " << action.placement.rotation << std::endl;
 		return false;
 	}
 	// TODO .. check if action's piece type is valid
@@ -191,10 +187,7 @@ void Tree::expand_node(Node& parent, vec<Node>& new_layer, int& node_count)
 		this->evaluator.evaluate(child, this->queue, this->queue_count);
 		if (parent.origin.placement.type == PIECE_NONE) child.origin = child.action;
 		if (this->best < child) this->best = child;
-		if (child.state.current != PIECE_NONE) {
-			new_layer.add(child);
-			std::push_heap(new_layer.iter_begin(), new_layer.iter_end());
-		}
+		if (child.state.current != PIECE_NONE) new_layer.add(child);
 	}
 	node_count += current_list_count;
 
@@ -217,10 +210,7 @@ void Tree::expand_node(Node& parent, vec<Node>& new_layer, int& node_count)
 			this->evaluator.evaluate(child, this->queue, this->queue_count);
 			if (parent.origin.placement.type == PIECE_NONE) child.origin = child.action;
 			if (this->best < child) this->best = child;
-			if (child.state.current != PIECE_NONE) {
-				new_layer.add(child);
-				std::push_heap(new_layer.iter_begin(), new_layer.iter_end());
-			}
+			if (child.state.current != PIECE_NONE) new_layer.add(child);
 		}
 		node_count += hold_list_count;
 	}
@@ -241,6 +231,7 @@ void Tree::expand_layer(vec<Node>& previous_layer, vec<Node>& new_layer, int& wi
 		std::pop_heap(previous_layer.iter_begin(), previous_layer.iter_end());
 		previous_layer.pop();
 	}
+	std::make_heap(new_layer.iter_begin(), new_layer.iter_end());
 }
 
 /*
