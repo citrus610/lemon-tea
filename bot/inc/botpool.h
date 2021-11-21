@@ -3,12 +3,16 @@
 #include "tree.h"
 #include "debug.h"
 
+/*
+
+constexpr int MAX_THREAD_COUNT = 8;
+
 struct BotSolution {
 	BitBoard original_board;
 	Action action;
 	MoveType move[32];
 	int move_count = 0;
-	Score score = { 0, 0 };
+	int score = 0;
 	int node = 0;
 	int depth = 0;
 };
@@ -32,23 +36,28 @@ struct BotAction {
 struct BotSetting {
 	Weight weight;
 	bool forecast = false;
+	int thread = 1;
 };
 
-class Bot
+class BotPool
 {
 	std::mutex mutex;
-	std::vector<BotState> state_buffer;
-	std::vector<BotAction> action_buffer;
-	std::vector<BotSolution> solution_buffer;
-	bool running = false;
+	std::condition_variable cv;
+	std::vector<BotState> state_buffer[MAX_THREAD_COUNT];
+	std::vector<BotAction> action_buffer[MAX_THREAD_COUNT];
+	std::vector<BotSolution> solution_buffer[MAX_THREAD_COUNT];
+	bool running[MAX_THREAD_COUNT];
 public:
-	std::thread* thread = nullptr;
+	std::thread* thread[MAX_THREAD_COUNT];
+public:
+	BotPool();
 public:
 	void init_thread(BotSetting setting, BotState state);
 	void end_thread();
 	void set_state(BotState state);
 	void advance_state(BotAction action);
-	bool request_solution(BotSolution& solution);
+	BotSolution request_solution();
 	bool is_running();
 };
 
+*/

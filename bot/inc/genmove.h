@@ -2,7 +2,7 @@
 
 #include "bitboard.h"
 
-constexpr int MAX_MOVE_GENERATOR = 64;
+constexpr int MAX_MOVE_GENERATOR = 80;
 
 class MoveGenerator
 {

@@ -43,3 +43,10 @@ struct Node
 	};
 };
 
+struct NodeForecast {
+	Node parent;
+	Node children[7];
+	PieceType bag[7];
+	int bag_count = 0;
+	int score = 0;
+};

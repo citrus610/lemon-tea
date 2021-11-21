@@ -5,27 +5,36 @@
 
 constexpr int MAX_TREE_QUEUE = 16;
 constexpr int MAX_TREE_LAYER_SIZE = 25600;
+constexpr int MAX_TREE_LAYER_FORECAST_SIZE = 400;
+constexpr int MAX_TREE_LAYER_FORECAST_DEPTH = 8;
 
 class Tree
 {
 public:
 	PieceType queue[MAX_TREE_QUEUE]; int queue_count = 0;
+	PieceType bag[7]; int bag_count = 0;
 	Node root;
 	Node best;
 	vec<Node> layer[MAX_TREE_QUEUE + 2];
+	vec<NodeForecast> layer_forecast[MAX_TREE_LAYER_FORECAST_DEPTH];
 public:
-	int beam = 200;
+	int beam = 200; // should be const
 	bool forecast = false;
 public:
 	Evaluator evaluator;
 public:
-	void init();
+	void init(bool forecast);
 	void clear();
-	void set(BitBoard board, PieceType current, PieceType hold, PieceType next[MAX_TREE_QUEUE], int next_count, int b2b, int ren);
+	void clear_forecast();
+	bool set(BitBoard board, PieceType current, PieceType hold, PieceType next[MAX_TREE_QUEUE], int next_count, int b2b, int ren, bool init);
 	bool advance(Action& action, PieceType new_piece[MAX_TREE_QUEUE], int new_piece_count);
 	void attempt_node(Node& parent, Node& child, PieceData& placement, bool hold);
+	void convert_node_forecast(Node& parent, int& node_count);
+	void forecast_node(NodeForecast& node_forecast, int& node_count);
 	void expand_node(Node& parent, vec<Node>& new_layer, int& node_count);
+	void expand_node_forecast(NodeForecast& parent, vec<NodeForecast>& new_layer, int& node_count);
 	void expand_layer(vec<Node>& previous_layer, vec<Node>& new_layer, int& width, int& node_count);
+	void expand_layer_forecast(vec<NodeForecast>& previous_layer, vec<NodeForecast>& new_layer, int& width, int& node_count);
 public:
 	int search(int iteration);
 	void search_one_iter(int& iter_num, int& layer_index, int& node_count);
