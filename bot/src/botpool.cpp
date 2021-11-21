@@ -1,15 +1,22 @@
-#include "bot.h"
+#include "botpool.h"
 
 /*
-* Start a bot thread
-*/
-void Bot::init_thread(BotSetting setting, BotState state)
+
+BotPool::BotPool()
+{
+	for (int i = 0; i < MAX_THREAD_COUNT; ++i) {
+		state_buffer[i].clear();
+		action_buffer[i].clear();
+		solution_buffer[i].clear();
+		this->thread[i] = nullptr;
+		running[i] = false;
+	}
+}
+
+void BotPool::init_thread(BotSetting setting, BotState state)
 {
 	// Check if the thread had already started
-	{
-		std::unique_lock<std::mutex> lk(mutex);
-		if (running) return;
-	}
+	if (this->is_running()) return;
 
 	// Reset thread data
 	running = true;
@@ -22,7 +29,7 @@ void Bot::init_thread(BotSetting setting, BotState state)
 		{
 			// Init tree
 			Tree tree;
-			tree.init(bot_setting.forecast);
+			tree.init();
 			tree.set(
 				bot_state.board,
 				bot_state.current,
@@ -30,8 +37,7 @@ void Bot::init_thread(BotSetting setting, BotState state)
 				bot_state.next,
 				bot_state.next_count,
 				bot_state.b2b,
-				bot_state.ren,
-				true
+				bot_state.ren
 			);
 			tree.evaluator.weight = bot_setting.weight;
 
@@ -48,20 +54,22 @@ void Bot::init_thread(BotSetting setting, BotState state)
 				++depth;
 				depth = std::min(depth, tree.queue_count + 1);
 
-				std::unique_lock<std::mutex> lk(mutex);
-
 				// Create solution
-				if (state_buffer.empty() && action_buffer.empty()) {
+				{
+					std::unique_lock<std::mutex> lk(mutex);
+
 					BotSolution new_solution;
-					Node best_node = tree.get_best();
 					new_solution.original_board = tree.root.state.board;
-					new_solution.action = best_node.origin;
-					new_solution.score = best_node.score;
+					new_solution.action = tree.get_best().origin;
 					new_solution.node = node_count;
 					new_solution.depth = depth;
+
 					if (solution_buffer.empty()) solution_buffer.push_back(new_solution);
 					solution_buffer[0] = new_solution;
 				}
+				cv.notify_one();
+
+				std::unique_lock<std::mutex> lk(mutex);
 
 				// Set new game state
 				if (!state_buffer.empty()) {
@@ -77,8 +85,7 @@ void Bot::init_thread(BotSetting setting, BotState state)
 						state_buffer[0].next,
 						state_buffer[0].next_count,
 						state_buffer[0].b2b,
-						state_buffer[0].ren,
-						false
+						state_buffer[0].ren
 					);
 
 					state_buffer.clear();
@@ -111,62 +118,72 @@ void Bot::init_thread(BotSetting setting, BotState state)
 	std::cout << "start thread" << std::endl;
 }
 
-/*
-* Destroy the bot thread
-*/
-void Bot::end_thread()
+void BotPool::end_thread()
 {
+	if (!this->is_running()) return;
 	{
 		std::unique_lock<std::mutex> lk(mutex);
-		if (!running) return;
-		running = false;
+		for (int i = 0; i < MAX_THREAD_COUNT; ++i)
+			running[i] = false;
 	}
-	this->thread->join();
-	delete this->thread;
-	this->thread = nullptr;
+	for (int i = 0; i < MAX_THREAD_COUNT; ++i) {
+		this->thread[i]->join();
+		delete this->thread[i];
+		this->thread[i] = nullptr;
+		state_buffer[i].clear();
+		action_buffer[i].clear();
+		solution_buffer[i].clear();
+	}
 	std::cout << "destroy thread" << std::endl;
 }
 
-/*
-* Set a new game state for the bot
-*/
-void Bot::set_state(BotState state)
+void BotPool::set_state(BotState state)
 {
+	if (!this->is_running()) return;
+
 	std::unique_lock<std::mutex> lk(mutex);
-	if (!running) return;
-	state_buffer.push_back(state);
-	solution_buffer.clear();
+	for (int i = 0; i < MAX_THREAD_COUNT; ++i) {
+		state_buffer[i].push_back(state);
+	}
 };
 
-/*
-* Tell the board to play a move and advance the tree
-*/
-void Bot::advance_state(BotAction action)
+void BotPool::advance_state(BotAction action)
 {
+	if (!this->is_running()) return;
+
 	std::unique_lock<std::mutex> lk(mutex);
-	if (!running) return;
-	action_buffer.push_back(action);
-	solution_buffer.clear();
+	for (int i = 0; i < MAX_THREAD_COUNT; ++i) {
+		action_buffer[i].push_back(action);
+	}
 };
 
-/*
-* Request the currently best solution
-* Return true if new solution is found
-*/
-bool Bot::request_solution(BotSolution& solution)
+BotSolution BotPool::request_solution()
 {
 	std::unique_lock<std::mutex> lk(mutex);
-	if (solution_buffer.empty()) return false;
-	solution = solution_buffer[0];
-	PathFinder::search(solution.original_board, solution.action.placement, solution.move, solution.move_count);
-	return true;
+	cv.wait(lk, [&]() {
+		int solution_count = 0;
+		for (int i = 0; i < MAX_THREAD_COUNT; ++i) {
+			solution_count += (int)(!solution_buffer[i].empty());
+		}
+		return solution_count > 0;
+		});
+	BotSolution result;
+	for (int i = 0; i < MAX_THREAD_COUNT; ++i) {
+		if (!solution_buffer[i].empty())
+			result = solution_buffer[i][0];
+	}
+	PathFinder::search(result.original_board, result.action.placement, result.move, result.move_count);
+	return result;
 };
 
-/*
-* Check if the bot thread is running
-*/
-bool Bot::is_running()
+bool BotPool::is_running()
 {
 	std::unique_lock<std::mutex> lk(mutex);
-	return running;
+	int running_count = 0;
+	for (int i = 0; i < MAX_THREAD_COUNT; ++i) {
+		running_count += (int)running[i];
+	}
+	return running_count > 0;
 };
+
+*/
