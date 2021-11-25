@@ -9,6 +9,7 @@ struct WeightAttack {
 	int waste_time = 0;
 	int waste_T = 0;
 	int waste_I = 0;
+	int b2b = 0;
 };
 
 struct WeightDefence {
@@ -52,4 +53,5 @@ public:
 	static void blocked(BitBoard& board, int column_height[10], int blocked[2]);
 	static PieceData structure(BitBoard& board, int column_height[10]);
 	static bool quiescence(BitBoard& board, int column_height[10], int depth, int tspin_structure[2]);
+	static int spike(Node& root, Node& node);
 };

@@ -2,6 +2,8 @@
 
 #include "bitboard.h"
 
+constexpr int MAX_NODE_ACTION = 20;
+
 struct GameState
 {
 	BitBoard board;
@@ -34,8 +36,8 @@ struct Score
 struct Node
 {
 	GameState state;
-	Action action;
 	Action origin;
+	Action action;
 	Score score;
 
 	bool operator < (Node& other) {

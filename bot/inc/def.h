@@ -152,7 +152,7 @@ constexpr int SRS_LUT[2][4][5][2] =
 * Combo table
 * NOTE TO SELF: REN_LUT[state.ren]
 */
-constexpr int MAX_COMBO_TABLE_SIZE = 10;
+constexpr int MAX_COMBO_TABLE_SIZE = 12;
 constexpr int REN_LUT[MAX_COMBO_TABLE_SIZE] =
 {
 	0,
@@ -163,6 +163,8 @@ constexpr int REN_LUT[MAX_COMBO_TABLE_SIZE] =
 	2,
 	3,
 	3,
-	3,
-	3
+	4,
+	4,
+	4,
+	5
 };
