@@ -114,7 +114,7 @@ void MoveGenerator::generate(BitBoard& board, PieceType piece, PieceData result[
 	PieceData softdrop[2][MAX_MOVE_GENERATOR];
 	int softdrop_count[2] = { 0, 0 };
 
-	// For I, J, L, S, Z, O, T
+	// Level 1
 	for (int i = 0; i < harddrop_count; ++i) {
 		PieceData children[4];
 		int children_count = 0;
@@ -133,27 +133,25 @@ void MoveGenerator::generate(BitBoard& board, PieceType piece, PieceData result[
 	memcpy(result + result_count, softdrop[0], softdrop_count[0] * sizeof(PieceData));
 	result_count += softdrop_count[0];
 
-	// For T
-	if (piece == PIECE_T) {
-		for (int i = 0; i < softdrop_count[0]; ++i) {
-			PieceData children[4];
-			int children_count = 0;
+	// Level 2
+	for (int i = 0; i < softdrop_count[0]; ++i) {
+		PieceData children[4];
+		int children_count = 0;
 
-			MoveGenerator::expand(board, softdrop[0][i], children, children_count);
+		MoveGenerator::expand(board, softdrop[0][i], children, children_count);
 
-			for (int k = 0; k < children_count; ++k) {
-				if (board.is_above_stack(children[k])) continue;
-				children[k].y -= board.get_drop_distance(children[k]);
-				if (MoveGenerator::is_in(children[k], softdrop[0], softdrop_count[0], false) == -1 &&
-					MoveGenerator::is_in(children[k], softdrop[1], softdrop_count[1], false) == -1) {
-					softdrop[1][softdrop_count[1]] = children[k];
-					++softdrop_count[1];
-				}
+		for (int k = 0; k < children_count; ++k) {
+			if (board.is_above_stack(children[k])) continue;
+			children[k].y -= board.get_drop_distance(children[k]);
+			if (MoveGenerator::is_in(children[k], softdrop[0], softdrop_count[0], false) == -1 &&
+				MoveGenerator::is_in(children[k], softdrop[1], softdrop_count[1], false) == -1) {
+				softdrop[1][softdrop_count[1]] = children[k];
+				++softdrop_count[1];
 			}
 		}
-		memcpy(result + result_count, softdrop[1], softdrop_count[1] * sizeof(PieceData));
-		result_count += softdrop_count[1];
 	}
+	memcpy(result + result_count, softdrop[1], softdrop_count[1] * sizeof(PieceData));
+	result_count += softdrop_count[1];
 }
 
 int MoveGenerator::is_in(PieceData& placement, PieceData list[MAX_MOVE_GENERATOR], int& list_count, bool exact)

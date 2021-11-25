@@ -2,9 +2,9 @@
 
 void Weight::standard()
 {
-	attack.clear[0] = -150;
-	attack.clear[1] = -100;
-	attack.clear[2] = -50;
+	attack.clear[0] = -200;
+	attack.clear[1] = -150;
+	attack.clear[2] = -100;
 	attack.clear[3] = 400;
 	attack.tspin[0] = 100;
 	attack.tspin[1] = 400;
@@ -12,16 +12,17 @@ void Weight::standard()
 	attack.perfect_clear = 1000;
 	attack.waste_time = -150;
 	attack.waste_T = -150;
-	attack.waste_I = 0;
+	attack.waste_I = -50;
+	attack.b2b = 100;
 
-	defence.max_height = -40;
+	defence.max_height = -35;
 	defence.max_height_top_half = -150;
 	defence.max_height_top_quarter = -600;
 	defence.bumpiness = -25;
 	defence.bumpiness_s = -7;
 	defence.bumpiness_t = -10;
 	defence.row_transition = -5;
-	defence.hole = -150;
+	defence.hole = -200;
 	defence.hole_s = -3;
 	defence.blocked = -17;
 	defence.blocked_s = -1;
@@ -38,7 +39,7 @@ void Weight::standard()
 	defence.well_position[9] = 24;
 	defence.structure[0] = 10;
 	defence.structure[1] = 400;
-	defence.b2b = 100;
+	defence.b2b = 50;
 	defence.ren = 150;
 }
 
@@ -118,7 +119,7 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int& queue_count)
 	node.score.defence += blocked[1] * this->weight.defence.blocked_s;
 
 	// B2B
-	node.score.defence += node.state.b2b * this->weight.defence.b2b;
+	node.score.defence += (node.state.b2b > 0) * this->weight.defence.b2b;
 
 	// Ren
 	node.score.defence += node.state.ren * node.state.ren / 5 * this->weight.defence.ren;
@@ -185,6 +186,9 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int& queue_count)
 		node.action.lock != LOCK_PC) {
 		node.score.attack += this->weight.attack.waste_I;
 	}
+
+	// B2B
+	node.score.attack += (node.state.b2b > 0) * this->weight.attack.b2b;
 }
 
 void Evaluator::evaluate_forecast(NodeForecast& node_forecast)
@@ -362,4 +366,56 @@ bool Evaluator::quiescence(BitBoard& board, int column_height[10], int depth, in
 		}
 	}
 	return result;
+}
+
+int Evaluator::spike(Node& root, Node& node)
+{
+	// Get line clear
+	BitBoard root_copy = root.state.board;
+	root_copy.place_piece(node.origin.placement);
+	int line_clear = root_copy.clear_line();
+
+	// Get attack
+	int attack = 0;
+	switch (node.origin.lock)
+	{
+	case LOCK_CLEAR_2:
+		attack = 1;
+		break;
+	case LOCK_CLEAR_3:
+		attack = 2;
+		break;
+	case LOCK_CLEAR_4:
+		attack = 4;
+		break;
+	case LOCK_TSPIN_1:
+		attack = 2;
+		break;
+	case LOCK_TSPIN_2:
+		attack = 4;
+		break;
+	case LOCK_TSPIN_3:
+		attack = 6;
+		break;
+	case LOCK_PC:
+		attack = 10;
+		break;
+	default:
+		break;
+	}
+	if (root.state.b2b > 0 && 
+		(
+			node.origin.lock == LOCK_CLEAR_4 ||
+			node.origin.lock == LOCK_TSPIN_1 ||
+			node.origin.lock == LOCK_TSPIN_2 ||
+			node.origin.lock == LOCK_TSPIN_3
+			)
+		) {
+		++attack;
+	}
+	if (line_clear > 0) {
+		attack += REN_LUT[std::min(root.state.ren, 11)];
+	}
+
+	return line_clear + attack;
 }

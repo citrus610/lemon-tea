@@ -57,7 +57,7 @@ bool Tree::set(BitBoard board, PieceType current, PieceType hold, PieceType next
 		for (int i = 0; i < this->queue_count; ++i)
 			if (next[i] != this->queue[i]) return false;
 	}
-	
+
 	// Reset root node
 	this->root = Node();
 	this->root.state = {
@@ -70,7 +70,7 @@ bool Tree::set(BitBoard board, PieceType current, PieceType hold, PieceType next
 	};
 
 	// Reset best node
-	this->best = Node();
+	this->best = Best();
 
 	// Set new queue
 	memcpy(this->queue, next, std::min(next_count, MAX_TREE_QUEUE) * sizeof(PieceType));
@@ -132,7 +132,7 @@ bool Tree::advance(Action& action, PieceType new_piece[MAX_TREE_QUEUE], int new_
 	}
 	if (action.hold) {
 		if (this->root.state.hold == PIECE_NONE) {
-			if (this->queue_count < 1 || action.placement.type != this->queue[0]) 
+			if (this->queue_count < 1 || action.placement.type != this->queue[0])
 				return false;
 		}
 		else {
@@ -141,10 +141,10 @@ bool Tree::advance(Action& action, PieceType new_piece[MAX_TREE_QUEUE], int new_
 		}
 	}
 	else {
-		if (action.placement.type != this->root.state.current) 
+		if (action.placement.type != this->root.state.current)
 			return false;
 	}
-	
+
 	// If forecast on, check if new pieces is valid
 	if (this->forecast) {
 		// Check if all new pieces are valid
@@ -242,7 +242,7 @@ bool Tree::advance(Action& action, PieceType new_piece[MAX_TREE_QUEUE], int new_
 	this->queue_count += real_new_piece_count;
 
 	// Reset best node
-	this->best = Node();
+	this->best = Best();
 
 	// Clear layer
 	this->clear();
@@ -340,32 +340,7 @@ void Tree::convert_node_forecast(Node& parent, int& node_count)
 	this->evaluator.evaluate_forecast(new_node_forecast);
 
 	// Add to the first forecast layer
-	if (this->layer_forecast[0].get_size() < this->beam) {
-		this->layer_forecast[0].add(new_node_forecast);
-		if (this->layer_forecast[0].get_size() >= this->beam) {
-			std::make_heap(
-				this->layer_forecast[0].iter_begin(),
-				this->layer_forecast[0].iter_end(),
-				[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
-			);
-		}
-	}
-	else {
-		if (new_node_forecast.score > this->layer_forecast[0][0].score) {
-			std::pop_heap(
-				this->layer_forecast[0].iter_begin(),
-				this->layer_forecast[0].iter_end(),
-				[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
-			);
-			this->layer_forecast[0].pop();
-			this->layer_forecast[0].add(new_node_forecast);
-			std::push_heap(
-				this->layer_forecast[0].iter_begin(),
-				this->layer_forecast[0].iter_end(),
-				[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
-			);
-		}
-	}
+	this->push_node_forecast(new_node_forecast, this->layer_forecast[0]);
 }
 
 /*
@@ -416,6 +391,39 @@ void Tree::forecast_node(NodeForecast& node_forecast, int& node_count)
 }
 
 /*
+* Push a forecast node to a forecast layer in a way that maintain the piority queue
+*/
+void Tree::push_node_forecast(NodeForecast& node, vec<NodeForecast>& new_layer)
+{
+	if (new_layer.get_size() < this->beam) {
+		new_layer.add(node);
+		if (new_layer.get_size() >= this->beam) {
+			std::make_heap(
+				new_layer.iter_begin(),
+				new_layer.iter_end(),
+				[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
+			);
+		}
+	}
+	else {
+		if (node.score > new_layer[0].score) {
+			std::pop_heap(
+				new_layer.iter_begin(),
+				new_layer.iter_end(),
+				[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
+			);
+			new_layer.pop();
+			new_layer.add(node);
+			std::push_heap(
+				new_layer.iter_begin(),
+				new_layer.iter_end(),
+				[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
+			);
+		}
+	}
+}
+
+/*
 * Create new nodes from a parent then push them to a layer
 */
 void Tree::expand_node(Node& parent, vec<Node>& new_layer, int& node_count)
@@ -432,7 +440,7 @@ void Tree::expand_node(Node& parent, vec<Node>& new_layer, int& node_count)
 		this->attempt_node(parent, child, current_list[i], false);
 		this->evaluator.evaluate(child, this->queue, this->queue_count);
 		if (parent.origin.placement.type == PIECE_NONE) child.origin = child.action;
-		if (this->best < child) this->best = child;
+		if (this->best.node < child) this->best.node = child;
 		if (child.state.current != PIECE_NONE) new_layer.add(child);
 	}
 	node_count += current_list_count;
@@ -455,7 +463,7 @@ void Tree::expand_node(Node& parent, vec<Node>& new_layer, int& node_count)
 			this->attempt_node(parent, child, hold_list[i], true);
 			this->evaluator.evaluate(child, this->queue, this->queue_count);
 			if (parent.origin.placement.type == PIECE_NONE) child.origin = child.action;
-			if (this->best < child) this->best = child;
+			if (this->best.node < child) this->best.node = child;
 			if (child.state.current != PIECE_NONE) new_layer.add(child);
 		}
 		node_count += hold_list_count;
@@ -502,32 +510,7 @@ void Tree::expand_node_forecast(NodeForecast& parent, vec<NodeForecast>& new_lay
 		this->evaluator.evaluate_forecast(child);
 
 		// Add to next layer
-		if (new_layer.get_size() < this->beam) {
-			new_layer.add(child);
-			if (new_layer.get_size() >= this->beam) {
-				std::make_heap(
-					new_layer.iter_begin(),
-					new_layer.iter_end(),
-					[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
-				);
-			}
-		}
-		else {
-			if (child.score > new_layer[0].score) {
-				std::pop_heap(
-					new_layer.iter_begin(),
-					new_layer.iter_end(),
-					[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
-				);
-				new_layer.pop();
-				new_layer.add(child);
-				std::push_heap(
-					new_layer.iter_begin(),
-					new_layer.iter_end(),
-					[&](NodeForecast& first, NodeForecast& second) { return second.score < first.score; }
-				);
-			}
-		}
+		this->push_node_forecast(child, new_layer);
 	}
 }
 
@@ -587,10 +570,17 @@ void Tree::search_one_iter(int& iter_num, int& layer_index, int& node_count)
 	if (iter_num == 0) {
 		expand_node(this->root, this->layer[0], node_count);
 		if (this->layer[0].get_size() > 0) {
-			this->best = this->layer[0][0];
-			for (int i = 1; i < this->layer[0].get_size(); ++i)
-				if (this->best < this->layer[0][i]) this->best = this->layer[0][i];
+			this->best.node = this->layer[0][0];
+			for (int i = 0; i < this->layer[0].get_size(); ++i) {
+				if (this->best.node < this->layer[0][i]) this->best.node = this->layer[0][i];
+				int node_spike = Evaluator::spike(this->root, this->layer[0][i]);
+				if (node_spike > this->best.spike_count) {
+					this->best.spike = this->layer[0][i];
+					this->best.spike_count = node_spike;
+				}
+			}
 		}
+		std::make_heap(this->layer[0].iter_begin(), this->layer[0].iter_end());
 		layer_index = 0;
 		return;
 	}
@@ -626,7 +616,34 @@ void Tree::search_one_iter(int& iter_num, int& layer_index, int& node_count)
 /*
 * Get the (currently) best node
 */
-Node Tree::get_best()
+Node Tree::get_best(int incomming_attack)
 {
-	return this->best;
+	return Tree::pick_from_best(this->root, this->best, incomming_attack);
+}
+
+/*
+* Pick the best move from a list of candidate with incomming garbage in mind
+*/
+Node Tree::pick_from_best(Node& root, Best& candidate, int incomming_attack)
+{
+	// Let the result be the best node
+	Node result = candidate.node;
+
+	// If forecast mode is on and the forecast node is better than the best node, let result be the forecast node
+	if (candidate.forecast.parent.origin.placement.type != PIECE_NONE &&
+		candidate.forecast.score > result.score.attack + result.score.defence) {
+		result = candidate.forecast.parent;
+	}
+
+	// If there is incomming garbage and the bot is about to die, let result be the best spike action
+	int root_height[10];
+	root.state.board.get_height(root_height);
+	int max_height_center = *std::max_element(root_height + 3, root_height + 7);
+	if (candidate.spike_count > 0 &&
+		incomming_attack > 0 &&
+		max_height_center + incomming_attack - Evaluator::spike(root, result) > 20) {
+		result = candidate.spike;
+	}
+
+	return result;
 }
