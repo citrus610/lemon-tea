@@ -51,4 +51,8 @@ struct NodeForecast {
 	PieceType bag[7];
 	int bag_count = 0;
 	int score = 0;
+
+	bool operator < (NodeForecast& other) {
+		return score < other.score;
+	};
 };
