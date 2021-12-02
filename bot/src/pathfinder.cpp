@@ -68,43 +68,41 @@ bool PathFinder::search(BitBoard& board, PieceData& placement, MoveType list[32]
 	}
 
 	// For those under stack positions, try move to find soft drop positions again
-	if (placement.type == PIECE_T) {
-		std::vector<PathFinderNode> under_stack_2;
-		under_stack_2.reserve(64);
-		for (int i = 0; i < (int)under_stack.size(); ++i) {
-			// Expand
-			PathFinderNode children[4];
-			int children_count = 0;
-			PathFinder::expand(board, under_stack[i], children, children_count);
+	std::vector<PathFinderNode> under_stack_2;
+	under_stack_2.reserve(64);
+	for (int i = 0; i < (int)under_stack.size(); ++i) {
+		// Expand
+		PathFinderNode children[4];
+		int children_count = 0;
+		PathFinder::expand(board, under_stack[i], children, children_count);
 
-			// For every child
-			for (int k = 0; k < children_count; ++k) {
-				// If above stack, then skip
-				if (board.is_above_stack(children[k].position)) continue;
+		// For every child
+		for (int k = 0; k < children_count; ++k) {
+			// If above stack, then skip
+			if (board.is_above_stack(children[k].position)) continue;
 
-				// Update position by soft drop
-				int distain = board.get_drop_distance(children[k].position);
-				children[k].position.y -= distain;
-				if (distain > 0) {
-					children[k].path[children[k].path_count] = MOVE_DOWN;
-					++children[k].path_count;
+			// Update position by soft drop
+			int distain = board.get_drop_distance(children[k].position);
+			children[k].position.y -= distain;
+			if (distain > 0) {
+				children[k].path[children[k].path_count] = MOVE_DOWN;
+				++children[k].path_count;
+			}
+
+			// If found destination
+			if (children[k].position == placement) {
+				memcpy(list, children[k].path, children[k].path_count * sizeof(MoveType));
+				list_count = children[k].path_count;
+				if (list[list_count - 1] != MOVE_DOWN) {
+					list[list_count] = MOVE_DOWN;
+					++list_count;
 				}
+				return true;
+			}
 
-				// If found destination
-				if (children[k].position == placement) {
-					memcpy(list, children[k].path, children[k].path_count * sizeof(MoveType));
-					list_count = children[k].path_count;
-					if (list[list_count - 1] != MOVE_DOWN) {
-						list[list_count] = MOVE_DOWN;
-						++list_count;
-					}
-					return true;
-				}
-
-				// Push if hasn't existed
-				if (PathFinder::list_index(children[k], under_stack_2) == -1) {
-					under_stack_2.push_back(children[k]);
-				}
+			// Push if hasn't existed
+			if (PathFinder::list_index(children[k], under_stack_2) == -1) {
+				under_stack_2.push_back(children[k]);
 			}
 		}
 	}

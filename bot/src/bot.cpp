@@ -28,7 +28,7 @@ void Bot::init_thread(BotSetting setting, PieceType current, PieceType queue[MAX
 		{
 			// Init tree
 			Tree tree;
-			tree.init(bot_setting.forecast);
+			tree.init();
 			tree.set(
 				BitBoard(),
 				bot_state.current,
@@ -36,20 +36,20 @@ void Bot::init_thread(BotSetting setting, PieceType current, PieceType queue[MAX
 				bot_state.next,
 				bot_state.next_count,
 				0,
-				0,
-				true
+				0
 			);
 			tree.evaluator.weight = bot_setting.weight;
 
 			int iter_num = 0;
 			int layer_index = 0;
+			int width = 0;
 			int node_count = 0;
 			int depth = 0;
 
 			while (true)
 			{
 				// Search one iter
-				tree.search_one_iter(iter_num, layer_index, node_count);
+				tree.search_one_iter(iter_num, layer_index, width, node_count);
 				++iter_num;
 				++depth;
 				depth = std::max(depth, layer_index + 1);
@@ -72,6 +72,7 @@ void Bot::init_thread(BotSetting setting, PieceType current, PieceType queue[MAX
 				if (!state_buffer.empty()) {
 					iter_num = 0;
 					layer_index = 0;
+					width = 0;
 					node_count = 0;
 					depth = 0;
 
@@ -85,8 +86,7 @@ void Bot::init_thread(BotSetting setting, PieceType current, PieceType queue[MAX
 						queue_copy,
 						tree.queue_count,
 						state_buffer[0].b2b,
-						state_buffer[0].ren,
-						false
+						state_buffer[0].ren
 					);
 
 					state_buffer.clear();
@@ -104,6 +104,7 @@ void Bot::init_thread(BotSetting setting, PieceType current, PieceType queue[MAX
 					if (success) {
 						iter_num = 0;
 						layer_index = 0;
+						width = 0;
 						node_count = 0;
 						depth = 0;
 					}

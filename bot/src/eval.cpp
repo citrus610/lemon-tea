@@ -2,45 +2,45 @@
 
 void Weight::standard()
 {
-	attack.clear[0] = -200;
-	attack.clear[1] = -150;
-	attack.clear[2] = -100;
-	attack.clear[3] = 400;
-	attack.tspin[0] = 100;
-	attack.tspin[1] = 400;
-	attack.tspin[2] = 600;
-	attack.perfect_clear = 1000;
-	attack.waste_time = -150;
-	attack.waste_T = -150;
-	attack.waste_I = -50;
-	attack.b2b = 100;
+	attack.clear[0] = -199;
+	attack.clear[1] = -139;
+	attack.clear[2] = -93;
+	attack.clear[3] = 303;
+	attack.tspin[0] = 118;
+	attack.tspin[1] = 419;
+	attack.tspin[2] = 610;
+	attack.perfect_clear = 5000;
+	attack.waste_time = -162;
+	attack.waste_T = -131;
+	attack.waste_I = -110;
+	attack.b2b = 96;
 
-	defence.max_height = -35;
-	defence.max_height_top_half = -150;
-	defence.max_height_top_quarter = -600;
-	defence.bumpiness = -25;
+	defence.max_height = -10;
+	defence.max_height_top_half = -134;
+	defence.max_height_top_quarter = -597;
+	defence.bumpiness = -32;
 	defence.bumpiness_s = -7;
-	defence.bumpiness_t = -10;
+	defence.bumpiness_t = 8;
 	defence.row_transition = -5;
-	defence.hole = -200;
-	defence.hole_s = -3;
-	defence.blocked = -17;
+	defence.hole = -306;
+	defence.hole_s = -5;
+	defence.blocked = -14;
 	defence.blocked_s = -1;
-	defence.well = 57;
-	defence.well_position[0] = 20;
-	defence.well_position[1] = 23;
-	defence.well_position[2] = 23;
-	defence.well_position[3] = 50;
-	defence.well_position[4] = 59;
-	defence.well_position[5] = 21;
-	defence.well_position[6] = 59;
+	defence.well = 46;
+	defence.well_position[0] = 45;
+	defence.well_position[1] = 5;
+	defence.well_position[2] = 28;
+	defence.well_position[3] = 57;
+	defence.well_position[4] = 70;
+	defence.well_position[5] = 42;
+	defence.well_position[6] = 60;
 	defence.well_position[7] = 10;
-	defence.well_position[8] = -10;
-	defence.well_position[9] = 24;
-	defence.structure[0] = 10;
-	defence.structure[1] = 400;
-	defence.b2b = 50;
-	defence.ren = 150;
+	defence.well_position[8] = -20;
+	defence.well_position[9] = 51;
+	defence.structure[0] = 107;
+	defence.structure[1] = 394;
+	defence.b2b = 36;
+	defence.ren = 177;
 }
 
 void Evaluator::evaluate(Node& node, PieceType* queue, int& queue_count)
@@ -66,6 +66,7 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int& queue_count)
 	for (int i = node.state.next; i < queue_count; ++i) {
 		quiescence_depth += (queue[i] == PIECE_T);
 	}
+	quiescence_depth += (queue_count - node.state.next <= 3);
 	bool quiescence = Evaluator::quiescence(board, column_height, quiescence_depth, tspin_structure);
 
 	// Structure
@@ -121,7 +122,7 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int& queue_count)
 	// B2B
 	node.score.defence += (node.state.b2b > 0) * this->weight.defence.b2b;
 
-	// Ren
+	// REN
 	node.score.defence += node.state.ren * node.state.ren / 5 * this->weight.defence.ren;
 
 
