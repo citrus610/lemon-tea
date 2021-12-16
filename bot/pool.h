@@ -7,7 +7,7 @@ constexpr int CHUNK_SIZE = 128;
 class Pool
 {
 private:
-    vec<vec<Node>> chunk;
+    vec<vec<Node>> chunk = vec<vec<Node>>(false);
 public:
     Pool();
     ~Pool();

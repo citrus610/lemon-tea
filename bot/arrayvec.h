@@ -90,7 +90,7 @@ inline int arrayvec<T, N>::get_size()
 template <typename T, int N>
 inline int arrayvec<T, N>::get_capacity()
 {
-	return this->capacity;
+	return N;
 }
 
 template <typename T, int N>

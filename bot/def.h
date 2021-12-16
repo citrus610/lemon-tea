@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <cmath>
 #include <chrono>
 #include <vector>
 #include <array>
@@ -14,10 +15,6 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-
-#include <nmmintrin.h>
-#include <immintrin.h>
-#include <xmmintrin.h>
 
 #include "vec.h"
 #include "arrayvec.h"

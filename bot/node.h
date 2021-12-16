@@ -8,7 +8,7 @@ struct GameState
 {
 	BitBoard board;
 	PieceType hold = PIECE_NONE;
-    arrayvec<PieceType, 32> queue;
+    arrayvec<PieceType, 32> queue = arrayvec<PieceType, 32>();
 	int b2b = 0;
 	int ren = 0;
 };
@@ -31,25 +31,28 @@ struct Score
 {
 	int attack = 0;
 	int defence = 0;
-	int successor = INT_MIN;
+	int best = INT_MIN;
 };
 
 struct Node
 {
-	Node* parent;
-	vec<Node> children;
-	PieceData placement;
-	Score score;
+	Node* parent = nullptr;
+	vec<Node> children = vec<Node>(false);
+	PieceData placement = PieceData();
+	Score score = Score();
 };
 
 static inline int get_score(Score& score) 
 {
-	return score.attack + score.defence + score.successor;
+	if (score.best == INT_MIN) {
+		return score.attack + score.defence;
+	}
+	return score.attack + score.best;
 };
 
 static inline int get_score(Node& node) 
 {
-	return node.score.attack + node.score.defence + node.score.successor;
+	return get_score(node.score);
 };
 
 static inline bool operator < (Score& a, Score& b) 

@@ -1,8 +1,6 @@
 #pragma once
 
-#include "genmove.h"
-#include "node.h"
-#include "pathfinder.h"
+#include "tree.h"
 
 static char convert_piece_to_char(PieceType piece) {
 	switch (piece)
@@ -127,19 +125,19 @@ static void draw_board(BitBoard& board) {
 	}
 };
 
-/*
 static void draw_state(GameState& state) {
 	using namespace std;
 
 	cout << " - Board: " << endl;
 	draw_board(state.board);
-	cout << " - Current:    " << convert_piece_to_char(state.current) << endl;
 	cout << " - Hold:       " << convert_piece_to_char(state.hold) << endl;
-	cout << " - Next index: " << state.next << endl;
+	cout << " - Queue:      ";
+	for (int i = 0; i < state.queue.get_size(); ++i) {
+		cout << convert_piece_to_char(state.queue[i]) << " ";
+	} cout << endl;
 	cout << " - B2b:        " << state.b2b << endl;
 	cout << " - Ren:        " << state.ren << endl;
 }
-*/
 
 static void draw_piece_data(PieceData& piece_data) {
 	using namespace std;
@@ -149,46 +147,6 @@ static void draw_piece_data(PieceData& piece_data) {
 	cout << "    + Type:     " << convert_piece_to_char(piece_data.type) << endl;
 	cout << "    + Rotation: " << convert_rotation_to_char(piece_data.rotation) << endl;
 }
-
-/*
-static void draw_action(Action& action) {
-	using namespace std;
-
-	cout << " - Placement:  " << endl;
-	draw_piece_data(action.placement);
-	if (action.hold)
-		cout << " - Hold:       " << "TRUE" << endl;
-	else
-		cout << " - Hold:       " << "FALSE" << endl;
-	if (action.soft_drop)
-		cout << " - Soft drop:  " << "TRUE" << endl;
-	else
-		cout << " - Soft drop:  " << "FALSE" << endl;
-	cout << " - Lock:       " << convert_lock_to_string(action.lock) << endl;
-}
-*/
-
-/*
-static void draw_node(Node& node) {
-	using namespace std;
-
-	cout << "====== STATE ======" << endl;
-	draw_state(node.state);
-	cout << endl;
-
-	cout << "====== ORIGIN =====" << endl;
-	draw_action(node.origin);
-	cout << endl;
-
-	cout << "====== ACTION =====" << endl;
-	draw_action(node.action);
-	cout << endl;
-
-	cout << "====== SCORE ======" << endl;
-	cout << " - Attack:     " << node.score.attack << endl;
-	cout << " - Defence:    " << node.score.defence << endl;
-}
-*/
 
 static void draw_move_gen(BitBoard& board, PieceType piece) {
 	PieceData list[MAX_MOVE_GENERATOR];
@@ -202,5 +160,29 @@ static void draw_move_gen(BitBoard& board, PieceType piece) {
 		draw_board(copy);
 		draw_piece_data(list[i]);
 		std::cin.get();
+	}
+};
+
+static void count_tree_layer_node(int layer_count[32], vec<Node>& list, int depth) {
+	layer_count[depth] += list.get_size();
+
+	for (int i = 0; i < list.get_size(); ++i) {
+		count_tree_layer_node(layer_count, list[i].children, depth + 1);
+	}
+};
+
+static void draw_tree(Tree& tree)
+{
+	using namespace std;
+
+	int layer_count[32];
+	for (int i = 0; i < 32; ++i) {
+		layer_count[i] = 0;
+	}
+
+	count_tree_layer_node(layer_count, tree.candidate, 0);
+
+	for (int i = 0; i < 32 || layer_count[i] == 0; ++i) {
+		cout << " - Layer [" << i << "]: " << layer_count[i] << " nodes" << endl;
 	}
 };

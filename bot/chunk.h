@@ -1,8 +1,3 @@
-/*
-* A custom vector
-* They call me a mad man
-*/
-
 #pragma once
 
 #include <stdio.h>
@@ -12,13 +7,12 @@ template <typename T>
 class vec
 {
 public:
-	vec(bool auto_free);
+	vec();
 	~vec();
 private:
 	T* pointer = nullptr;
 	int capacity = 0;
 	int size = 0;
-	bool auto_delete = true;
 public:
 	T& operator [] (const int& index) { return pointer[index]; };
 	void init(int count);
@@ -36,18 +30,17 @@ public:
 };
 
 template<typename T>
-inline vec<T>::vec(bool auto_free)
+inline vec<T>::vec()
 {
 	this->pointer = nullptr;
 	this->capacity = 0;
 	this->size = 0;
-	this->auto_delete = auto_free;
 }
 
 template<typename T>
 inline vec<T>::~vec()
 {
-	if (this->auto_delete) this->destroy();
+	this->destroy();
 }
 
 template<typename T>

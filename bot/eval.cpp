@@ -1,58 +1,11 @@
 #include "eval.h"
 
-Weight DEFAULT_WEIGHT()
-{
-    Weight result;
-
-	result.attack.clear[0] = -199;
-	result.attack.clear[1] = -139;
-	result.attack.clear[2] = -93;
-	result.attack.clear[3] = 303;
-	result.attack.tspin[0] = 118;
-	result.attack.tspin[1] = 419;
-	result.attack.tspin[2] = 610;
-	result.attack.perfect_clear = 5000;
-	result.attack.waste_time = -162;
-	result.attack.waste_T = -131;
-	result.attack.waste_I = -110;
-	result.attack.b2b = 96;
-    result.attack.ren = 150;
-
-	result.defence.max_height = -10;
-	result.defence.max_height_top_half = -134;
-	result.defence.max_height_top_quarter = -597;
-	result.defence.bumpiness = -32;
-	result.defence.bumpiness_s = -7;
-	result.defence.bumpiness_t = 8;
-	result.defence.row_transition = -5;
-	result.defence.hole = -306;
-	result.defence.hole_s = -5;
-	result.defence.blocked = -14;
-	result.defence.blocked_s = -1;
-	result.defence.well = 46;
-	result.defence.well_position[0] = 45;
-	result.defence.well_position[1] = 5;
-	result.defence.well_position[2] = 28;
-	result.defence.well_position[3] = 57;
-	result.defence.well_position[4] = 70;
-	result.defence.well_position[5] = 42;
-	result.defence.well_position[6] = 60;
-	result.defence.well_position[7] = 10;
-	result.defence.well_position[8] = -20;
-	result.defence.well_position[9] = 51;
-	result.defence.structure[0] = 107;
-	result.defence.structure[1] = 394;
-	result.defence.b2b = 36;
-
-    return result;
-}
-
-void Evaluator::evaluate(Node* node, NodeState& node_state)
+void Evaluator::evaluate(Node& node, NodeState& node_state)
 {
 	/*
 	* Defence evaluation
 	*/
-	node->score.defence = 0;
+	node.score.defence = 0;
 	BitBoard board = node_state.state.board;
 
 	// Get column heights
@@ -61,8 +14,8 @@ void Evaluator::evaluate(Node* node, NodeState& node_state)
 
 	// Height top of the board
 	int max_height = *std::max_element(column_height, column_height + 10);
-	node->score.defence += std::max(max_height - 10, 0) * this->weight.defence.max_height_top_half;
-	node->score.defence += std::max(max_height - 15, 0) * this->weight.defence.max_height_top_quarter;
+	node.score.defence += std::max(max_height - 10, 0) * this->weight.defence.max_height_top_half;
+	node.score.defence += std::max(max_height - 15, 0) * this->weight.defence.max_height_top_quarter;
 
 	// Quiescence
 	int tspin_structure[2] = { 0, 0 };
@@ -86,19 +39,19 @@ void Evaluator::evaluate(Node* node, NodeState& node_state)
 				++tspin_structure[1];
 		}
 	}
-	node->score.defence += tspin_structure[0] * this->weight.defence.structure[0];
-	node->score.defence += tspin_structure[1] * this->weight.defence.structure[1];
+	node.score.defence += tspin_structure[0] * this->weight.defence.structure[0];
+	node.score.defence += tspin_structure[1] * this->weight.defence.structure[1];
 
 	// Height normal
 	max_height = *std::max_element(column_height, column_height + 10);
-	node->score.defence += max_height * this->weight.defence.max_height;
+	node.score.defence += max_height * this->weight.defence.max_height;
 
 	// Well
 	int well_position = 0;
 	int well_depth = Evaluator::well(board, column_height, well_position);
+	int min_height = column_height[well_position];
 	if (well_depth > 0) {
-		node->score.defence += well_depth * this->weight.defence.well;
-		node->score.defence += this->weight.defence.well_position[well_position];
+		node.score.defence += well_depth * this->weight.defence.well[well_position];
 	}
 	else {
 		well_position = -1;
@@ -107,62 +60,74 @@ void Evaluator::evaluate(Node* node, NodeState& node_state)
 	// Bumpiness
 	int bumpiness[3];
 	Evaluator::bumpiness(column_height, well_position, well_depth, bumpiness);
-	node->score.defence += bumpiness[0] * this->weight.defence.bumpiness;
-	node->score.defence += bumpiness[1] * this->weight.defence.bumpiness_s;
-	node->score.defence += bumpiness[2] * this->weight.defence.bumpiness_t;
+	node.score.defence += bumpiness[0] * this->weight.defence.bumpiness;
+	node.score.defence += bumpiness[1] * this->weight.defence.bumpiness_s;
+	node.score.defence += bumpiness[2] * this->weight.defence.flat;
+
+	// Column transition
+	int column_transition = Evaluator::column_transition(board, column_height);
+	node.score.defence += column_transition * this->weight.defence.column_transition;
 
 	// Row transition
 	int row_transition = Evaluator::row_transition(board, column_height);
-	node->score.defence += row_transition * this->weight.defence.row_transition;
+	node.score.defence += row_transition * this->weight.defence.row_transition;
 
 	// Hole
 	int hole = Evaluator::hole(board, column_height);
-	node->score.defence += hole * this->weight.defence.hole;
-	node->score.defence += hole * hole * this->weight.defence.hole_s;
+	node.score.defence += hole * this->weight.defence.hole;
+	node.score.defence += hole * hole * this->weight.defence.hole_s;
+
+	// Crack
+	int crack = Evaluator::crack(board, column_height, well_position, min_height);
+	node.score.defence += crack * this->weight.defence.crack;
+	node.score.defence += crack * crack * this->weight.defence.crack_s;
 
 	// Blocked hole
 	int blocked[2];
 	Evaluator::blocked(board, column_height, blocked);
-	node->score.defence += blocked[0] * this->weight.defence.blocked;
-	node->score.defence += blocked[1] * this->weight.defence.blocked_s;
+	node.score.defence += blocked[0] * this->weight.defence.blocked;
+	node.score.defence += blocked[1] * this->weight.defence.blocked_s;
 
 	// B2B
     if (node_state.state.b2b > 0) {
-	    node->score.defence += this->weight.defence.b2b;
+	    node.score.defence += this->weight.defence.b2b;
     }
 
 
 	/*
 	* Attack evaluation
 	*/
-    node->score.attack = 0;
+	node.score.attack = 0;
+	// if (node.parent != nullptr) {
+	// 	node.score.attack = node.parent->score.attack;
+	// }
 
-	// Attacks
+	// Line clear lock
 	switch (node_state.lock.type)
 	{
 	case LOCK_CLEAR_1:
-		node->score.attack += this->weight.attack.clear[0];
+		node.score.attack += this->weight.attack.clear[0];
 		break;
 	case LOCK_CLEAR_2:
-		node->score.attack += this->weight.attack.clear[1];
+		node.score.attack += this->weight.attack.clear[1];
 		break;
 	case LOCK_CLEAR_3:
-		node->score.attack += this->weight.attack.clear[2];
+		node.score.attack += this->weight.attack.clear[2];
 		break;
 	case LOCK_CLEAR_4:
-		node->score.attack += this->weight.attack.clear[3];
+		node.score.attack += this->weight.attack.clear[3];
 		break;
 	case LOCK_TSPIN_1:
-		node->score.attack += this->weight.attack.tspin[0];
+		node.score.attack += this->weight.attack.tspin[0];
 		break;
 	case LOCK_TSPIN_2:
-		node->score.attack += this->weight.attack.tspin[1];
+		node.score.attack += this->weight.attack.tspin[1];
 		break;
 	case LOCK_TSPIN_3:
-		node->score.attack += this->weight.attack.tspin[2];
+		node.score.attack += this->weight.attack.tspin[2];
 		break;
 	case LOCK_PC:
-		node->score.attack += this->weight.attack.perfect_clear;
+		node.score.attack += this->weight.attack.perfect_clear;
 		break;;
 	default:
 		break;
@@ -174,35 +139,35 @@ void Evaluator::evaluate(Node* node, NodeState& node_state)
 		node_state.lock.type != LOCK_TSPIN_2 &&
 		node_state.lock.type != LOCK_TSPIN_3 &&
 		node_state.lock.type != LOCK_PC)
-		node->score.attack += this->weight.attack.waste_time;
+		node.score.attack += this->weight.attack.waste_time;
 	if (node_state.lock.type == LOCK_CLEAR_1 ||
 		node_state.lock.type == LOCK_CLEAR_2 ||
 		node_state.lock.type == LOCK_CLEAR_3)
-		node->score.attack += this->weight.attack.waste_time;
+		node.score.attack += this->weight.attack.waste_time;
 
 	// Waste T
-	if (node->placement.type == PIECE_T &&
+	if (node.placement.type == PIECE_T &&
 		node_state.lock.type != LOCK_TSPIN_1 &&
 		node_state.lock.type != LOCK_TSPIN_2 &&
 		node_state.lock.type != LOCK_TSPIN_3 &&
 		node_state.lock.type != LOCK_PC) {
-		node->score.attack += this->weight.attack.waste_T;
+		node.score.attack += this->weight.attack.waste_T;
 	}
 
 	// Waste I
-	if (node->placement.type == PIECE_I &&
+	if (node.placement.type == PIECE_I &&
 		node_state.lock.type != LOCK_CLEAR_4 &&
 		node_state.lock.type != LOCK_PC) {
-		node->score.attack += this->weight.attack.waste_I;
+		node.score.attack += this->weight.attack.waste_I;
 	}
 
 	// B2B
     if (node_state.state.b2b > 0) {
-	    node->score.attack += this->weight.attack.b2b;
+	    node.score.attack += this->weight.attack.b2b;
     }
 
     // REN
-    node->score.attack += REN_LUT[std::min(node_state.state.ren, MAX_COMBO_TABLE_SIZE - 1)] * this->weight.attack.ren;
+    node.score.attack += REN_LUT[std::min(node_state.state.ren, MAX_COMBO_TABLE_SIZE - 1)] * this->weight.attack.ren;
 }
 
 int Evaluator::well(BitBoard& board, int column_height[10], int& well_position)
@@ -235,9 +200,19 @@ void Evaluator::bumpiness(int column_height[10], int well_position, int well_dep
 		int height_different = std::abs(column_height[pre_index] - column_height[i]);
 		result[0] += height_different;
 		result[1] += height_different * height_different;
-		result[2] += height_different > 0;
+		result[2] += height_different == 0;
 		pre_index = i;
 	}
+}
+
+int Evaluator::column_transition(BitBoard& board, int column_height[10])
+{
+	int result = 0;
+	for (int i = 0; i < 10; ++i) {
+		uint64_t xor_column = board.column[i] ^ ((board.column[i] << 1) | 0b1);
+		result += std::popcount(xor_column);
+	}
+	return result;
 }
 
 int Evaluator::row_transition(BitBoard& board, int column_height[10])
@@ -257,6 +232,16 @@ int Evaluator::hole(BitBoard& board, int column_height[10])
 	int result = 0;
 	for (int i = 0; i < 10; ++i) {
 		result += column_height[i] - std::popcount(board.column[i]);
+	}
+	return result;
+}
+
+int Evaluator::crack(BitBoard& board, int column_height[10], int well_position, int min_height)
+{
+	int result = 0;
+	for (int i = 0; i < 10; ++i) {
+		if (i == well_position) continue;
+		result += column_height[i] - min_height - std::popcount(board.column[i] >> min_height);
 	}
 	return result;
 }
