@@ -91,6 +91,7 @@ bool Tree::advance(Action action, PieceType* new_piece, int new_piece_count)
         }
     }
     if (!new_piece_valid) {
+		assert(false);
         return false;
     }
 

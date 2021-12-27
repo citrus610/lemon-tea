@@ -18,7 +18,7 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_count)
 	node.score.defence += std::max(max_height - 15, 0) * this->weight.defence.max_height_top_quarter;
 
 	// Quiescence
-	int tspin_structure[2] = { 0, 0 };
+	int tspin_structure[4] = { 0, 0, 0, 0 };
 	int quiescence_depth = (node.state.current == PIECE_T) + (node.state.hold == PIECE_T);
 	if (node.state.current != PIECE_T) {
 		for (int i = node.state.next; i < queue_count; ++i) {
@@ -32,17 +32,10 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_count)
 	bool quiescence = Evaluator::quiescence(board, column_height, quiescence_depth, tspin_structure);
 
 	// Structure
-	if (quiescence_depth < 1) {
-		PieceData relevent_structure = Evaluator::structure(board, column_height);
-		if (relevent_structure.type == PIECE_T) {
-			if (relevent_structure.rotation == PIECE_DOWN)
-				++tspin_structure[0];
-			else
-				++tspin_structure[1];
-		}
-	}
 	node.score.defence += tspin_structure[0] * this->weight.defence.structure[0];
 	node.score.defence += tspin_structure[1] * this->weight.defence.structure[1];
+	node.score.defence += tspin_structure[2] * this->weight.defence.structure[2];
+	node.score.defence += tspin_structure[3] * this->weight.defence.structure[3];
 
 	// Height normal
 	max_height = *std::max_element(column_height, column_height + 10);
@@ -331,19 +324,16 @@ PieceData Evaluator::structure(BitBoard& board, int column_height[10])
 	};
 }
 
-bool Evaluator::quiescence(BitBoard& board, int column_height[10], int depth, int tspin_structure[2])
+bool Evaluator::quiescence(BitBoard& board, int column_height[10], int depth, int tspin_structure[4])
 {
 	bool result = false;
 	for (int i = 0; i < depth; ++i) {
 		BitBoard copy = board;
 		PieceData quiet_piece = Evaluator::structure(copy, column_height);
 		if (quiet_piece.type == PIECE_NONE) break;
-		if (quiet_piece.rotation == PIECE_DOWN)
-			++tspin_structure[0];
-		else
-			++tspin_structure[1];
 		copy.place_piece(quiet_piece);
 		int line_clear = copy.clear_line();
+		++tspin_structure[line_clear];
 		if (line_clear >= 2) {
 			board = copy;
 			board.get_height(column_height);

@@ -1,10 +1,6 @@
 #pragma once
 
-#include "type.h"
 #include "../bot/bot.h"
-
-namespace TetrisGame
-{
 
 constexpr int PLAYER_DELAY_MOVE = 1;
 constexpr int PLAYER_DELAY_SOFTDROP = 2;
@@ -13,7 +9,7 @@ constexpr int PLAYER_DELAY_PLACE_PIECE = 7;
 constexpr int PLAYER_NEXT_COUNT = 5;
 constexpr int PLAYER_PRE_GENERATE_BAG_SIZE = 7000;
 
-class TetrisPlayer
+class Player
 {
 public:
 	BitBoard board;
@@ -28,7 +24,7 @@ public:
 public:
 	std::vector<PieceType> bag;
 	int bag_index = 0;
-	TetrisPlayer* enemy = nullptr;
+	Player* enemy = nullptr;
 	int incomming_garbage = 0;
 	int line_sent = 0;
 public:
@@ -41,7 +37,7 @@ public:
 	void init(std::vector<PieceType>& init_bag);
 	void update();
 public:
-	void set_enemy(TetrisPlayer* other);
+	void set_enemy(Player* other);
 	void fill_queue();
 	void update_current();
 public:
@@ -61,6 +57,4 @@ public:
 	bool is_clearline();
 	bool just_clearline();
 	void start_clearline(int line, bool pc);
-};
-
 };

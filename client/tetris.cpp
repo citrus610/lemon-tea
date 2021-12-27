@@ -18,7 +18,7 @@ void Tetris::load()
 
 void Tetris::update(double dt)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(34));
+    std::this_thread::sleep_for(std::chrono::microseconds(16000));
     this->battle.update();
     if (this->battle.is_gameover()) {
         this->battle.unload();

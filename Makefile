@@ -36,5 +36,6 @@ makedir:
 	@IF NOT exist bin\ppt\libppt_sync.dll ( copy lib\ppt_sync\libppt_sync.dll bin\ppt )
 	@IF NOT exist bin\ppt\ppt-sync.exe ( copy lib\ppt_sync\ppt-sync.exe bin\ppt )
 	@IF NOT exist bin\tuner ( mkdir bin\tuner )
+	@IF NOT exist bin\tuner\batch ( mkdir bin\tuner\batch )
 
 .DEFAULT_GOAL := client

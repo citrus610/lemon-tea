@@ -1,9 +1,6 @@
-#include "tetris_player.h"
+#include "player.h"
 
-namespace TetrisGame
-{
-
-void TetrisPlayer::init(std::vector<PieceType>& init_bag)
+void Player::init(std::vector<PieceType>& init_bag)
 {
 	this->board = BitBoard();
 	this->current = PIECE_NONE;
@@ -16,8 +13,7 @@ void TetrisPlayer::init(std::vector<PieceType>& init_bag)
 	this->piece_locked = false;
 
 	this->bag = init_bag;
-	// this->bag_index = 0;
-	this->bag_index = (rand() % 1000) * 7;
+	this->bag_index = 0;
 
 	this->incomming_garbage = 0;
 	this->line_sent = 0;
@@ -32,7 +28,7 @@ void TetrisPlayer::init(std::vector<PieceType>& init_bag)
 	this->update_current();
 }
 
-void TetrisPlayer::update()
+void Player::update()
 {
 	if (this->gameover) return;
 	this->update_clearline();
@@ -76,12 +72,12 @@ void TetrisPlayer::update()
 	}
 }
 
-void TetrisPlayer::set_enemy(TetrisPlayer* other)
+void Player::set_enemy(Player* other)
 {
 	this->enemy = other;
 }
 
-void TetrisPlayer::fill_queue()
+void Player::fill_queue()
 {
 	int current_queue_count = (int)this->next.size();
 	for (int i = 0; i < PLAYER_NEXT_COUNT - current_queue_count; ++i) {
@@ -91,7 +87,7 @@ void TetrisPlayer::fill_queue()
 	}
 }
 
-void TetrisPlayer::update_current()
+void Player::update_current()
 {
 	this->current = this->next[0];
 	this->next.erase(this->next.begin() + 0);
@@ -107,7 +103,7 @@ void TetrisPlayer::update_current()
 	this->piece_locked = false;
 }
 
-void TetrisPlayer::do_hold()
+void Player::do_hold()
 {
 	if (this->hold == PIECE_NONE) {
 		this->hold = this->current;
@@ -129,33 +125,33 @@ void TetrisPlayer::do_hold()
 	}
 }
 
-void TetrisPlayer::do_right()
+void Player::do_right()
 {
 	this->board.piece_try_right(this->piece);
 }
 
-void TetrisPlayer::do_left()
+void Player::do_left()
 {
 	this->board.piece_try_left(this->piece);
 }
 
-void TetrisPlayer::do_rotate(bool cw)
+void Player::do_rotate(bool cw)
 {
 	this->board.piece_try_rotate(this->piece, cw);
 }
 
-void TetrisPlayer::do_down()
+void Player::do_down()
 {
 	this->piece.y -= !this->board.is_colliding(this->piece.x, this->piece.y - 1, this->piece.type, this->piece.rotation);
 }
 
-void TetrisPlayer::do_drop()
+void Player::do_drop()
 {
 	this->piece.y -= this->board.get_drop_distance(this->piece);
 	this->piece_locked = true;
 }
 
-int TetrisPlayer::count_garbage()
+int Player::count_garbage()
 {
 	int result = 0;
 
@@ -211,7 +207,7 @@ int TetrisPlayer::count_garbage()
 	return result;
 }
 
-void TetrisPlayer::place_garbage()
+void Player::place_garbage()
 {
 	this->incomming_garbage = std::min(this->incomming_garbage, 22);
 
@@ -228,20 +224,20 @@ void TetrisPlayer::place_garbage()
 	this->incomming_garbage = 0;
 }
 
-void TetrisPlayer::send_garbage(int line)
+void Player::send_garbage(int line)
 {
 	if (this->enemy == nullptr) return;
 	this->enemy->incomming_garbage += line;
 	this->line_sent += line;
 }
 
-int TetrisPlayer::count_fullline()
+int Player::count_fullline()
 {
 	BitBoard copy = this->board;
 	return copy.clear_line();
 }
 
-void TetrisPlayer::update_clearline()
+void Player::update_clearline()
 {
 	++this->clearline_cnter;
 	if (this->clearline_cnter >= this->clearline_delay) {
@@ -255,17 +251,17 @@ void TetrisPlayer::update_clearline()
 	}
 }
 
-bool TetrisPlayer::is_clearline()
+bool Player::is_clearline()
 {
 	return this->clearline_cnter < this->clearline_delay;
 }
 
-bool TetrisPlayer::just_clearline()
+bool Player::just_clearline()
 {
 	return this->non_clearline_cnter == 1;
 }
 
-void TetrisPlayer::start_clearline(int line, bool pc)
+void Player::start_clearline(int line, bool pc)
 {
 	this->clearline_delay = 0;
 	if (pc) {
@@ -294,5 +290,3 @@ void TetrisPlayer::start_clearline(int line, bool pc)
 	this->clearline_cnter = 0;
 	this->non_clearline_cnter = 0;
 }
-
-};

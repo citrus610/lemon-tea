@@ -282,7 +282,8 @@ void Game::thread_func()
         this->render();
         wchar_t s[256];
 		swprintf_s(s, 256, L"Console Game Engine - %s - FPS: %3.2f", this->title.c_str(), 1.0f / (float)delta_time);
-		SetConsoleTitle(s);
+		// SetConsoleTitle(s);
+        this->draw_text(0, 0, std::to_wstring(1.0 / delta_time), ConsoleEngine::COLOR_FG_WHITE);
         WriteConsoleOutput(this->console_handle, this->screen, { (short)this->width, (short)this->height }, { 0, 0 }, &this->window_rectangle);
     }
 

@@ -86,12 +86,19 @@ void TetrisBattle::update_player(TetrisPlayer& player, Bot& bot, std::vector<Mov
 		}
 
 		// Hold if ok
-		bool first_hold = (solution.action.placement.type != player.current) && (player.hold == PIECE_NONE);
-		if (solution.action.placement.type != player.current) player.do_hold();
+		bool first_hold = (solution.action.hold) && (player.hold == PIECE_NONE);
+		if (solution.action.hold) player.do_hold();
 		//assert(placement.type == player.current);
 
 		// Set move vector
-		for (int i = 0; i < solution.move_count; ++i) movement.push_back(solution.move[i]);
+		for (int i = 0; i < solution.move_count; ++i) {
+			if (!movement.empty()) {
+				if (movement.back() == solution.move[i]) {
+					movement.push_back((MoveType)100);
+				}
+			}
+			movement.push_back(solution.move[i]);
+		}
 
 		// Advance tree
 		BotAction action;
@@ -108,6 +115,7 @@ void TetrisBattle::update_player(TetrisPlayer& player, Bot& bot, std::vector<Mov
 		//assert(ad_suc);
 	}
 	if (!movement.empty()) {
+		if (movement[0] != MOVE_DOWN) player.softdrop_cnter = 0;
 		switch (movement[0])
 		{
 		case MOVE_RIGHT:
@@ -130,12 +138,16 @@ void TetrisBattle::update_player(TetrisPlayer& player, Bot& bot, std::vector<Mov
 			if ((int)movement.size() == 1) {
 				player.do_drop();
 				movement.clear();
-				std::this_thread::sleep_for(std::chrono::milliseconds(16));
+				player.softdrop_cnter = 0;
 			}
 			else {
-				player.do_down();
+				++player.softdrop_cnter;
+				if (player.softdrop_cnter % PLAYER_DELAY_SOFTDROP == 0) player.do_down();
 				if (player.board.get_drop_distance(player.piece) == 0) movement.erase(movement.begin());
 			}
+			break;
+		case (MoveType)100:
+			movement.erase(movement.begin());
 			break;
 		default:
 			break;
