@@ -11,4 +11,5 @@ Currently Lemon Tea can only run and compile on Window with g++.
 - Lemon Tea's parameters can be changed in `config.json`.
 ### Build the tuner
 - Run `make tuner` to build Lemon Tea's weights tuner.
-- The client can be found in the `bin\tuner` folder.
+- The tuner can be found in the `bin\tuner` folder.
+- The tuner is a program that help improve Lemon Tea's parameters.
