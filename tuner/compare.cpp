@@ -54,9 +54,16 @@ void Compare::start(Weight base, Weight w1, Weight w2, int total, int batch_id, 
 		// Main loop
 		while (true)
 		{
-			// If reach max number of match, break
+			// If sprt ok or reach max number of match, break
 			{
 				std::unique_lock<std::mutex> lk(mutex);
+				double win = (double)this->data.win_v1;
+				double loss = (double)this->data.win_v2;
+				double draw = (double)(this->data.total - this->data.win_v1 - this->data.win_v2);
+				if (sprt(win, draw, loss, -5.0, 5.0, 0.05, 0.05) != SPRT_NULL) {
+					save_json(this->data, id);
+					break;
+				}
 				if (this->data.total >= total_cnt) {
 					save_json(this->data, id);
 					break;

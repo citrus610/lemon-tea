@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dev.h"
+#include "sprt.h"
 
 constexpr int COMPARE_MAX_BATTLE_FRAME = 20000;
 constexpr int COMPARE_MAX_BATTLE = 1000;
