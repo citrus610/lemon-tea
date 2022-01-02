@@ -60,7 +60,7 @@ void Compare::start(Weight base, Weight w1, Weight w2, int total, int batch_id, 
 				double win = (double)this->data.win_v1;
 				double loss = (double)this->data.win_v2;
 				double draw = (double)(this->data.total - this->data.win_v1 - this->data.win_v2);
-				if (sprt(win, draw, loss, -5.0, 5.0, 0.05, 0.05) != SPRT_NULL) {
+				if (Sprt::sprt(win, draw, loss, -5.0, 5.0, 0.05, 0.05) != SPRT_NULL) {
 					save_json(this->data, id);
 					break;
 				}

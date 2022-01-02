@@ -1,11 +1,11 @@
 #include "sprt.h"
 
-static double elo_diff_to_win_rate(double elo_diff)
+double Sprt::elo_diff_to_win_rate(double elo_diff)
 {
     return 1.0 / (1.0 + pow(10.0, (double)(-elo_diff) / 400.0));
 };
 
-static double log_likelihood_ratio_approximate(double win, double draw, double loss, double elo_diff_0, double elo_diff_1)
+double Sprt::log_likelihood_ratio_approximate(double win, double draw, double loss, double elo_diff_0, double elo_diff_1)
 {
     if (win == 0 || draw == 0 || loss == 0) {
         return 0.0;
@@ -23,9 +23,9 @@ static double log_likelihood_ratio_approximate(double win, double draw, double l
     return (win_rate_1 - win_rate_0) * (2 * win_rate - win_rate_0 - win_rate_1) / win_rate_variance / 2.0;
 };
 
-static SPRT_RESULT sprt(double win, double draw, double loss, double elo_diff_0, double elo_diff_1, double false_positive_rate, double false_negative_rate)
+SPRT_RESULT Sprt::sprt(double win, double draw, double loss, double elo_diff_0, double elo_diff_1, double false_positive_rate, double false_negative_rate)
 {
-    double log_likelihood_ratio = log_likelihood_ratio_approximate(win, draw, loss, elo_diff_0, elo_diff_1);
+    double log_likelihood_ratio = Sprt::log_likelihood_ratio_approximate(win, draw, loss, elo_diff_0, elo_diff_1);
 
     double lower_bound = log(false_negative_rate / (1.0 - false_positive_rate));
     double upper_bound = log((1.0 - false_negative_rate) / false_positive_rate);
