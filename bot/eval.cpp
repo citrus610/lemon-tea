@@ -28,7 +28,12 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_count)
 			}
 		}
 	}
-	quiescence_depth += (queue_count - node.state.next <= 3);
+	quiescence_depth += (queue_count - node.state.next <= 2);
+	// for (int i = node.state.next; i < queue_count; ++i) {
+	// 	if (queue[i] == PIECE_T) {
+	// 		++quiescence_depth;
+	// 	}
+	// }
 	bool quiescence = Evaluator::quiescence(board, column_height, quiescence_depth, tspin_structure);
 
 	// Structure
@@ -132,12 +137,13 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_count)
 		node.action.lock != LOCK_TSPIN_1 &&
 		node.action.lock != LOCK_TSPIN_2 &&
 		node.action.lock != LOCK_TSPIN_3 &&
-		node.action.lock != LOCK_PC)
-		node.score.attack += this->weight.attack.waste_time;
-	if (node.action.lock == LOCK_CLEAR_1 ||
-		node.action.lock == LOCK_CLEAR_2 ||
-		node.action.lock == LOCK_CLEAR_3)
-		node.score.attack += this->weight.attack.waste_time;
+		node.action.lock != LOCK_PC) {
+		node.score.attack += (20 - node.action.placement.y) * this->weight.attack.waste_time;
+	}
+	// if (node.action.lock == LOCK_CLEAR_1 ||
+	// 	node.action.lock == LOCK_CLEAR_2 ||
+	// 	node.action.lock == LOCK_CLEAR_3)
+	// 	node.score.attack += this->weight.attack.waste_time;
 
 	// Waste T
 	if (node.action.placement.type == PIECE_T &&
