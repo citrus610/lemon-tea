@@ -8,27 +8,27 @@ namespace TetrisGame
 class TetrisBattle
 {
 public:
-	TetrisBattle();
+    TetrisBattle();
 public:
-	std::vector<PieceType> bag;
+    std::vector<LemonTea::PieceType> bag;
 public:
-	TetrisPlayer player_1;
-	TetrisPlayer player_2;
+    TetrisPlayer player_1;
+    TetrisPlayer player_2;
 public:
-	Bot bot_1;
-	Bot bot_2;
-	Weight w_1;
-	Weight w_2;
-	std::vector<MoveType> movement_1;
-	std::vector<MoveType> movement_2;
+    LemonTea::Bot bot_1;
+    LemonTea::Bot bot_2;
+    LemonTea::Weight w_1;
+    LemonTea::Weight w_2;
+    std::vector<LemonTea::MoveType> movement_1;
+    std::vector<LemonTea::MoveType> movement_2;
 public:
-	void init();
-	void update();
-	void update_player(TetrisPlayer& player, Bot& bot, std::vector<MoveType>& movement);
-	void unload();
+    void init(bool vs_cc);
+    void update();
+    void update_player(TetrisPlayer& player, LemonTea::Bot& bot, std::vector<LemonTea::MoveType>& movement);
+    void unload();
 public:
-	bool is_gameover();
-	int get_winner();
+    bool is_gameover();
+    int get_winner();
 };
 
 }

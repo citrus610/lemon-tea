@@ -15,7 +15,7 @@ Game::Game(int w, int h, int pixel_size)
     memset(this->screen, 0, sizeof(CHAR_INFO) * this->width * this->height);
 
     this->console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-	this->console_input_handle = GetStdHandle(STD_INPUT_HANDLE);
+    this->console_input_handle = GetStdHandle(STD_INPUT_HANDLE);
 
     for (int i = 0; i < 256; ++i) this->keyboard_state_new[i] = 0;
     for (int i = 0; i < 256; ++i) this->keyboard_state_old[i] = 0;
@@ -23,57 +23,57 @@ Game::Game(int w, int h, int pixel_size)
     for (int i = 0; i < 5; ++i) this->mouse_state_new[i] = false;
     for (int i = 0; i < 5; ++i) this->mouse_state_old[i] = false;
     for (int i = 0; i < 5; ++i) this->mouse[i] = KeyState();
-	this->mouse_x = 0;
-	this->mouse_y = 0;
+    this->mouse_x = 0;
+    this->mouse_y = 0;
     this->console_focus = true;
 
-	this->title = L"Game Console";
+    this->title = L"Game Console";
 
     if (this->console_handle == INVALID_HANDLE_VALUE) {
-		this->error(L"Bad Handle");
+        this->error(L"Bad Handle");
         return;
     }
 
-	this->window_rectangle = { 0, 0, 1, 1 };
-	SetConsoleWindowInfo(this->console_handle, TRUE, &this->window_rectangle);
+    this->window_rectangle = { 0, 0, 1, 1 };
+    SetConsoleWindowInfo(this->console_handle, TRUE, &this->window_rectangle);
 
-	COORD coord = { (short)this->width, (short)this->height };
-	if (!SetConsoleScreenBufferSize(this->console_handle, coord)) {
-		this->error(L"SetConsoleScreenBufferSize failed");
+    COORD coord = { (short)this->width, (short)this->height };
+    if (!SetConsoleScreenBufferSize(this->console_handle, coord)) {
+        this->error(L"SetConsoleScreenBufferSize failed");
     }
-	if (!SetConsoleActiveScreenBuffer(this->console_handle)) {
-		this->error(L"SetConsoleActiveScreenBuffer failed");
+    if (!SetConsoleActiveScreenBuffer(this->console_handle)) {
+        this->error(L"SetConsoleActiveScreenBuffer failed");
     }
-	
-	CONSOLE_FONT_INFOEX console_font_info;
-	console_font_info.cbSize = sizeof(console_font_info);
-	console_font_info.nFont = 0;
-	console_font_info.dwFontSize.X = pixel_size;
-	console_font_info.dwFontSize.Y = pixel_size;
-	console_font_info.FontFamily = FF_DONTCARE;
-	console_font_info.FontWeight = FW_NORMAL;
-	wcscpy_s(console_font_info.FaceName, L"Consolas");
-	if (!SetCurrentConsoleFontEx(this->console_handle, false, &console_font_info)) {
-		this->error(L"SetCurrentConsoleFontEx failed");
-    }
-
-	CONSOLE_SCREEN_BUFFER_INFO console_screen_buffer_infor;
-	if (!GetConsoleScreenBufferInfo(this->console_handle, &console_screen_buffer_infor)) {
-		this->error(L"GetConsoleScreenBufferInfo failed");
-    }
-	if (this->height > console_screen_buffer_infor.dwMaximumWindowSize.Y) {
-		this->error(L"Screen Height / Font Height Too Big");
-    }
-	if (this->width > console_screen_buffer_infor.dwMaximumWindowSize.X) {
-		this->error(L"Screen Width / Font Width Too Big");
+    
+    CONSOLE_FONT_INFOEX console_font_info;
+    console_font_info.cbSize = sizeof(console_font_info);
+    console_font_info.nFont = 0;
+    console_font_info.dwFontSize.X = pixel_size;
+    console_font_info.dwFontSize.Y = pixel_size;
+    console_font_info.FontFamily = FF_DONTCARE;
+    console_font_info.FontWeight = FW_NORMAL;
+    wcscpy_s(console_font_info.FaceName, L"Consolas");
+    if (!SetCurrentConsoleFontEx(this->console_handle, false, &console_font_info)) {
+        this->error(L"SetCurrentConsoleFontEx failed");
     }
 
-	this->window_rectangle = { 0, 0, (short)(this->width - 1), (short)(this->height - 1) };
-	if (!SetConsoleWindowInfo(this->console_handle, TRUE, &this->window_rectangle)) {
-		this->error(L"SetConsoleWindowInfo failed");
-    }		
-	if (!SetConsoleMode(this->console_handle, ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT)) {
-		this->error(L"SetConsoleMode failed");
+    CONSOLE_SCREEN_BUFFER_INFO console_screen_buffer_infor;
+    if (!GetConsoleScreenBufferInfo(this->console_handle, &console_screen_buffer_infor)) {
+        this->error(L"GetConsoleScreenBufferInfo failed");
+    }
+    if (this->height > console_screen_buffer_infor.dwMaximumWindowSize.Y) {
+        this->error(L"Screen Height / Font Height Too Big");
+    }
+    if (this->width > console_screen_buffer_infor.dwMaximumWindowSize.X) {
+        this->error(L"Screen Width / Font Width Too Big");
+    }
+
+    this->window_rectangle = { 0, 0, (short)(this->width - 1), (short)(this->height - 1) };
+    if (!SetConsoleWindowInfo(this->console_handle, TRUE, &this->window_rectangle)) {
+        this->error(L"SetConsoleWindowInfo failed");
+    }        
+    if (!SetConsoleMode(this->console_handle, ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT)) {
+        this->error(L"SetConsoleMode failed");
     }
 
     HWND console_window = GetConsoleWindow();
@@ -82,7 +82,7 @@ Game::Game(int w, int h, int pixel_size)
     console_window_style ^= WS_MAXIMIZEBOX;
     SetWindowLong(console_window, GWL_STYLE, console_window_style);
 
-	SetConsoleCtrlHandler((PHANDLER_ROUTINE)this->close_handler, TRUE);
+    SetConsoleCtrlHandler((PHANDLER_ROUTINE)this->close_handler, TRUE);
 }
 
 Game::~Game()
@@ -93,14 +93,14 @@ Game::~Game()
 
 void Game::start()
 {
-	Game::atomic_running = true;
-	std::thread thread = std::thread(&Game::thread_func, this);
-	thread.join();
+    Game::atomic_running = true;
+    std::thread thread = std::thread(&Game::thread_func, this);
+    thread.join();
 };
 
 void Game::end()
 {
-	Game::atomic_running = false;
+    Game::atomic_running = false;
 };
 
 void Game::clear()
@@ -111,10 +111,10 @@ void Game::clear()
 void Game::draw(int x, int y, PixelType pixel, Color color)
 {
     if (x >= 0 && x < this->width && y >= 0 && y < this->height)
-	{
-		this->screen[y * this->width + x].Char.UnicodeChar = pixel;
-		this->screen[y * this->width + x].Attributes = color;
-	}
+    {
+        this->screen[y * this->width + x].Char.UnicodeChar = pixel;
+        this->screen[y * this->width + x].Attributes = color;
+    }
 };
 
 void Game::draw_rectangle(int x, int y, int w, int h, PixelType pixel, Color color)
@@ -141,11 +141,11 @@ void Game::draw_rectangle(int x, int y, int w, int h, PixelType pixel, Color col
 void Game::draw_text(int x, int y, std::wstring text, Color color)
 {
     for (size_t i = 0; i < text.size(); ++i)
-	{
+    {
         if (y * this->width + x + i < 0 || y * this->width + x + i >= this->width * this->height) continue;
-		this->screen[y * this->width + x + i].Char.UnicodeChar = text[i];
-		this->screen[y * this->width + x + i].Attributes = color;
-	}
+        this->screen[y * this->width + x + i].Char.UnicodeChar = text[i];
+        this->screen[y * this->width + x + i].Attributes = color;
+    }
 };
 
 int Game::get_width()
@@ -189,8 +189,8 @@ void Game::thread_func()
     this->load();
 
     // Time point
-	auto time_point_1 = std::chrono::system_clock::now();
-	auto time_point_2 = std::chrono::system_clock::now();
+    auto time_point_1 = std::chrono::system_clock::now();
+    auto time_point_2 = std::chrono::system_clock::now();
 
     // Game loop
     while (Game::atomic_running) {
@@ -281,8 +281,8 @@ void Game::thread_func()
         // Render
         this->render();
         wchar_t s[256];
-		swprintf_s(s, 256, L"Console Game Engine - %s - FPS: %3.2f", this->title.c_str(), 1.0f / (float)delta_time);
-		// SetConsoleTitle(s);
+        swprintf_s(s, 256, L"Console Game Engine - %s - FPS: %3.2f", this->title.c_str(), 1.0f / (float)delta_time);
+        // SetConsoleTitle(s);
         this->draw_text(0, 0, std::to_wstring(1.0 / delta_time), ConsoleEngine::COLOR_FG_WHITE);
         WriteConsoleOutput(this->console_handle, this->screen, { (short)this->width, (short)this->height }, { 0, 0 }, &this->window_rectangle);
     }
@@ -296,20 +296,20 @@ void Game::thread_func()
 void Game::error(const wchar_t *messages)
 {
     wchar_t buffer[256];
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buffer, 256, NULL);
-	SetConsoleActiveScreenBuffer(this->original_console_handle);
-	wprintf(L"ERROR: %s\n\t%s\n", messages, buffer);
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buffer, 256, NULL);
+    SetConsoleActiveScreenBuffer(this->original_console_handle);
+    wprintf(L"ERROR: %s\n\t%s\n", messages, buffer);
 };
 
 BOOL Game::close_handler(DWORD event)
 {
     if (event == CTRL_CLOSE_EVENT)
-	{
-		Game::atomic_running = false;
-		std::unique_lock<std::mutex> lk(Game::mutex);
-		Game::cv_exit.wait(lk);
-	}
-	return TRUE;
+    {
+        Game::atomic_running = false;
+        std::unique_lock<std::mutex> lk(Game::mutex);
+        Game::cv_exit.wait(lk);
+    }
+    return TRUE;
 };
 
 };
