@@ -1,8 +1,8 @@
 CXX = g++
 ifeq ($(BUILD),debug)   
-CXXFLAGS += -fdiagnostics-color=always -DUNICODE -std=c++20 -Og -g
+CXXFLAGS += -fdiagnostics-color=always -DUNICODE -std=c++20 -Wall -Og -g
 else
-CXXFLAGS += -DUNICODE -DNDEBUG -std=c++20 -O3 -s -march=native
+CXXFLAGS += -DUNICODE -DNDEBUG -std=c++20 -Wall -O3 -flto -s -march=native
 endif
 
 .PHONY: all client tuner clean makedir
