@@ -3,299 +3,304 @@
 namespace LemonTea
 {
 
+bool PathFinderNode::operator < (PathFinderNode& other)
+{
+    if (this->input == other.input) {
+        return this->path.get_size() < other.path.get_size();
+    }
+    return this->input < other.input;
+};
+
+bool PathFinderNode::operator > (PathFinderNode& other)
+{
+    if (this->input == other.input) {
+        return this->path.get_size() > other.path.get_size();
+    }
+    return this->input > other.input;
+};
+
+bool PathFinderNode::operator == (PathFinderNode& other)
+{
+    return this->input == other.input && this->path.get_size() == other.path.get_size();
+};
+
 bool PathFinder::search(Board& board, Piece& placement, MoveType list[32], int& list_count)
 {
     // Sanity
     list_count = 0;
     if (placement.type == PIECE_NONE ||
-        board.is_colliding(
-            placement.x,
-            placement.y,
-            placement.type,
-            placement.rotation
-        )) {
+        board.is_colliding(placement.x, placement.y, placement.type, placement.rotation) ||
+        board.get_drop_distance(placement) > 0
+        ) {
         list_count = 1;
         list[0] = MOVE_DOWN;
+        assert(false);
         return false;
     }
+    Piece placement_normalize = placement.get_normalize();
 
-    // Find all on stack positions
+    // Find on stack paths
     std::vector<PathFinderNode> on_stack;
-    PathFinder::generate_on_stack(board, placement.type, on_stack);
-
-    // For those on stack positions, try move to find soft drop positions
-    std::vector<PathFinderNode> under_stack;
-    under_stack.reserve(64);
-    for (int i = 0; i < (int)on_stack.size(); ++i) {
-        // If current on stack position is the solution, then ok
-        if (on_stack[i].position == placement) {
-            memcpy(list, on_stack[i].path, on_stack[i].path_count * sizeof(MoveType));
-            list_count = on_stack[i].path_count;
+    PathFinder::generate_onstack(board, placement.type, on_stack);
+    if (board.is_above_stack(placement)) {
+        bool found_path = false;
+        PathFinderNode result_node;
+        for (int i = 0; i < int(on_stack.size()); ++i) {
+            if (placement_normalize == on_stack[i].placement.get_normalize()) {
+                if (!found_path) {
+                    result_node = on_stack[i];
+                    found_path = true;
+                }
+                else {
+                    if (on_stack[i] < result_node) {
+                        result_node = on_stack[i];
+                    }
+                }
+            }
+        }
+        if (found_path) {
+            memcpy(list, result_node.path.iter_begin(), sizeof(MoveType) * result_node.path.get_size());
+            list_count = result_node.path.get_size();
+            if (list[list_count - 1] != MOVE_DOWN) {
+                list[list_count] = MOVE_DOWN;
+                list_count += 1;
+            }
             return true;
         }
+    }
 
-        // Expand
-        PathFinderNode children[4];
-        int children_count = 0;
-        PathFinder::expand(board, on_stack[i], children, children_count);
-
-        // For every child
-        for (int k = 0; k < children_count; ++k) {
-            // If above stack, then skip
-            if (board.is_above_stack(children[k].position)) continue;
-
-            // Update position by soft drop
-            int distain = board.get_drop_distance(children[k].position);
-            children[k].position.y -= distain;
-            if (distain > 0) {
-                children[k].path[children[k].path_count] = MOVE_DOWN;
-                ++children[k].path_count;
+    // Find underground position level 1
+    std::vector<PathFinderNode> under_stack_1;
+    PathFinder::generate_understack(board, on_stack, under_stack_1);
+    for (int i = 0; i < int(under_stack_1.size()); ++i) {
+        if (placement_normalize == under_stack_1[i].placement.get_normalize()) {
+            memcpy(list, under_stack_1[i].path.iter_begin(), sizeof(MoveType) * under_stack_1[i].path.get_size());
+            list_count = under_stack_1[i].path.get_size();
+            if (list[list_count - 1] != MOVE_DOWN) {
+                list[list_count] = MOVE_DOWN;
+                list_count += 1;
             }
-
-            // If found destination
-            if (children[k].position == placement) {
-                memcpy(list, children[k].path, children[k].path_count * sizeof(MoveType));
-                list_count = children[k].path_count;
-                if (list[list_count - 1] != MOVE_DOWN) {
-                    list[list_count] = MOVE_DOWN;
-                    ++list_count;
-                }
-                return true;
-            }
-
-            // Push if hasn't existed
-            if (PathFinder::list_index(children[k], under_stack) == -1) {
-                under_stack.push_back(children[k]);
-            }
+            return true;
         }
     }
 
-    // For those under stack positions, try move to find soft drop positions again
+    // Find underground position level 2
     std::vector<PathFinderNode> under_stack_2;
-    under_stack_2.reserve(64);
-    for (int i = 0; i < (int)under_stack.size(); ++i) {
-        // Expand
-        PathFinderNode children[4];
-        int children_count = 0;
-        PathFinder::expand(board, under_stack[i], children, children_count);
-
-        // For every child
-        for (int k = 0; k < children_count; ++k) {
-            // If above stack, then skip
-            if (board.is_above_stack(children[k].position)) continue;
-
-            // Update position by soft drop
-            int distain = board.get_drop_distance(children[k].position);
-            children[k].position.y -= distain;
-            if (distain > 0) {
-                children[k].path[children[k].path_count] = MOVE_DOWN;
-                ++children[k].path_count;
+    PathFinder::generate_understack(board, under_stack_1, under_stack_2);
+    for (int i = 0; i < int(under_stack_2.size()); ++i) {
+        if (placement_normalize == under_stack_2[i].placement.get_normalize()) {
+            memcpy(list, under_stack_2[i].path.iter_begin(), sizeof(MoveType) * under_stack_2[i].path.get_size());
+            list_count = under_stack_2[i].path.get_size();
+            if (list[list_count - 1] != MOVE_DOWN) {
+                list[list_count] = MOVE_DOWN;
+                list_count += 1;
             }
-
-            // If found destination
-            if (children[k].position == placement) {
-                memcpy(list, children[k].path, children[k].path_count * sizeof(MoveType));
-                list_count = children[k].path_count;
-                if (list[list_count - 1] != MOVE_DOWN) {
-                    list[list_count] = MOVE_DOWN;
-                    ++list_count;
-                }
-                return true;
-            }
-
-            // Push if hasn't existed
-            if (PathFinder::list_index(children[k], under_stack_2) == -1) {
-                under_stack_2.push_back(children[k]);
-            }
+            return true;
         }
     }
 
-    // If no solution found, then simply hard drop to death
-    list_count = 1;
     list[0] = MOVE_DOWN;
+    list_count = 1;
+    assert(false);
     return false;
 };
 
-void PathFinder::calculate_input(PathFinderNode& node)
+bool PathFinder::attempt(Board& board, PathFinderNode& parent, PathFinderNode& child, MoveType move)
 {
-    node.input_count = node.path_count;
-    for (int i = 0; i < node.path_count - 1; ++i) {
-        if (node.path[i] == node.path[i + 1]) ++node.input_count;
+    child = parent;
+    bool success = false;
+    switch (move)
+    {
+    case MOVE_RIGHT:
+        success = child.placement.move_right(board);
+        break;
+    case MOVE_LEFT:
+        success = child.placement.move_left(board);
+        break;
+    case MOVE_CW:
+        success = child.placement.move_cw(board);
+        break;
+    case MOVE_CCW:
+        success = child.placement.move_ccw(board);
+        break;
+    case MOVE_DOWN:
+        success = board.get_drop_distance(child.placement) > 0;
+        child.placement.move_drop(board);
+        break;
+    default:
+        break;
     }
-    if ((node.path[node.path_count - 2] == MOVE_CW ||
-        node.path[node.path_count - 2] == MOVE_CCW) &&
-        node.path[node.path_count - 1] == MOVE_DOWN)
-        --node.input_count;
-};
-
-void PathFinder::expand(Board& board, PathFinderNode& node, PathFinderNode result[4], int& result_count)
-{
-    result_count = 0;
-
-    PathFinderNode right = node;
-    PathFinderNode left = node;
-
-    if (right.position.move_right(board)) {
-        right.path[right.path_count] = MOVE_RIGHT;
-        ++right.path_count;
-        result[result_count] = right;
-        ++result_count;
+    if (!success) {
+        return false;
     }
-
-    if (left.position.move_left(board)) {
-        left.path[left.path_count] = MOVE_LEFT;
-        ++left.path_count;
-        result[result_count] = left;
-        ++result_count;
+    if (child.path[child.path.get_size() - 1] == move) {
+        child.input += 2;
     }
-
-    if (node.position.type != PIECE_O) {
-        PathFinderNode cw = node;
-        PathFinderNode ccw = node;
-
-        if (cw.position.move_cw(board)) {
-            cw.path[cw.path_count] = MOVE_CW;
-            ++cw.path_count;
-            result[result_count] = cw;
-            ++result_count;
-        }
-
-        if (ccw.position.move_ccw(board)) {
-            ccw.path[ccw.path_count] = MOVE_CCW;
-            ++ccw.path_count;
-            result[result_count] = ccw;
-            ++result_count;
+    else {
+        child.input += 1;
+    }
+    if (child.path[child.path.get_size() - 1] == MOVE_CW || child.path[child.path.get_size() - 1] == MOVE_CCW) {
+        if (move == MOVE_DOWN) {
+            child.input -= 1;
         }
     }
+    child.path.add(move);
+    return true;
 };
 
-void PathFinder::generate_on_stack(Board& board, PieceType piece, std::vector<PathFinderNode>& result)
+void PathFinder::expand(Board& board, PathFinderNode& parent, arrayvec<PathFinderNode, 4>& children)
 {
-    // Sanity check
-    result.reserve(64);
-    result.clear();
+    children.clear();
 
-    // Init open and close vector
+    PathFinderNode c_right;
+    if (PathFinder::attempt(board, parent, c_right, MOVE_RIGHT)) {
+        children.add(c_right);
+    }
+
+    PathFinderNode c_left;
+    if (PathFinder::attempt(board, parent, c_left, MOVE_LEFT)) {
+        children.add(c_left);
+    }
+
+    if (parent.placement.type != PIECE_O) {
+        PathFinderNode c_cw;
+        if (PathFinder::attempt(board, parent, c_cw, MOVE_CW)) {
+            children.add(c_cw);
+        }
+
+        PathFinderNode c_ccw;
+        if (PathFinder::attempt(board, parent, c_ccw, MOVE_CCW)) {
+            children.add(c_ccw);
+        }
+    }
+};
+
+int PathFinder::index(PathFinderNode& node, std::vector<PathFinderNode>& vec)
+{
+    for (int i = 0; i < int(vec.size()); ++i) {
+        if (node.placement == vec[i].placement) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+void PathFinder::generate_onstack(Board& board, PieceType type, std::vector<PathFinderNode>& position)
+{
+    position.reserve(64);
+    position.clear();
+
     std::vector<PathFinderNode> open;
     std::vector<PathFinderNode> close;
     open.reserve(128);
     close.reserve(128);
 
-    // Find init piece position
-    PathFinderNode init;
-    init.position = {
-        4,
-        19,
-        piece,
-        PIECE_UP
+    PathFinderNode spawn;
+    spawn.placement = {
+        .x = 4,
+        .y = 19,
+        .type = type,
+        .rotation = PIECE_UP
     };
-    if (board.is_colliding(4, 19, piece, PIECE_UP)) {
-        init.position.y = 20;
-        if (board.is_colliding(4, 20, piece, PIECE_UP)) {
+
+    if (board.is_colliding(4, 19, type, PIECE_UP)) {
+        spawn.placement.y = 20;
+        if (board.is_colliding(4, 20, type, PIECE_UP)) {
             return;
         }
     }
 
-    // Push init position to open vector
-    open.push_back(init);
+    open.push_back(spawn);
 
-    // Push init hard drop position to result vector
-    init.position.y -= board.get_drop_distance(init.position);
-    init.path[0] = MOVE_DOWN;
-    init.path_count = 1;
-    result.push_back(init);
+    spawn.placement.move_drop(board);
+    spawn.path.add(MOVE_DOWN);
+    position.push_back(spawn);
 
-    // Search
     while (!open.empty())
     {
-        // Get a parent by pop heap
         PathFinderNode parent = open[0];
-        open[0] = open[open.size() - 1];
+        open[0] = open.back();
         open.pop_back();
 
-        // Create children
-        PathFinderNode children[4];
-        int children_count = 0;
-        PathFinder::expand(board, parent, children, children_count);
+        arrayvec<PathFinderNode, 4> children = arrayvec<PathFinderNode, 4>();
+        PathFinder::expand(board, parent, children);
 
-        // Find new on stack positions
-        for (int i = 0; i < children_count; ++i) {
+        for (int i = 0; i < children.get_size(); ++i) {
+            int open_index = PathFinder::index(children[i], open);
+            int close_index = PathFinder::index(children[i], close);
 
-            // If new node, then add to open vector
-            int open_index = PathFinder::list_index(children[i], open);
-            int close_index = PathFinder::list_index(children[i], close);
             if (open_index == -1 && close_index == -1) {
                 open.push_back(children[i]);
             }
-            // Else, if node exist in both vectors
-            if (open_index != -1 && close_index != -1) {
-                PathFinder::calculate_input(children[i]);
-                PathFinder::calculate_input(open[open_index]);
-                PathFinder::calculate_input(close[close_index]);
-                PathFinderNode min_o_c = open[open_index];
-                if (open[open_index] > close[close_index]) {
-                    min_o_c = close[close_index];
-                }
-                if (!(children[i] > min_o_c)) {
-                    open[open_index] = children[i];
-                    if (children[i] < close[close_index])
-                        close[close_index] = children[i];
-                }
-                else
-                    continue;
-            }
-            // Else, if node exist in open vector
-            if (open_index != -1 && close_index == -1) {
-                PathFinder::calculate_input(children[i]);
-                PathFinder::calculate_input(open[open_index]);
-                if (!(children[i] > open[open_index]))
-                    open[open_index] = children[i];
-                else
-                    continue;
-            }
-            // Else, if node exist in close vector
-            if (close_index != -1 && open_index == -1) {
-                PathFinder::calculate_input(children[i]);
-                PathFinder::calculate_input(close[close_index]);
+
+            if (open_index == -1 && close_index != -1) {
                 if (!(children[i] > close[close_index])) {
+                    close[close_index] = children[i];
                     open.push_back(children[i]);
+                }
+            }
+
+            if (open_index != -1 && close_index == -1) {
+                if (children[i] < open[open_index]) {
+                    open[open_index] = children[i];
+                }
+                else if (children[i] == open[open_index]) {
+                    open.push_back(children[i]);
+                }
+            }
+
+            if (open_index != -1 && close_index != -1) {
+                if (!(children[i] > close[close_index])) {
                     close[close_index] = children[i];
                 }
-                else
-                    continue;
+                if (children[i] < open[open_index]) {
+                    open[open_index] = children[i];
+                }
+                if (children[i] == open[open_index]) {
+                    open.push_back(children[i]);
+                }
             }
 
-            // Drop piece to ground -> updated
-            PathFinderNode updated_child = children[i];
-            updated_child.position.y -= board.get_drop_distance(updated_child.position);
-            updated_child.path[updated_child.path_count] = MOVE_DOWN;
-            ++updated_child.path_count;
+            PathFinderNode child_drop;
+            PathFinder::attempt(board, children[i], child_drop, MOVE_DOWN);
 
-            // Check if updated child had been in result vec or not
-            int uchild_index = PathFinder::list_index(updated_child, result);
-            if (uchild_index == -1) {
-                // If not then simply push back
-                result.push_back(updated_child);
+            int child_drop_index = PathFinder::index(child_drop, position);
+            if (child_drop_index == -1){
+                position.push_back(child_drop);
             }
             else {
-                // Else, then check if the new node have smaller input count, push back
-                PathFinder::calculate_input(updated_child);
-                PathFinder::calculate_input(result[uchild_index]);
-                if (updated_child < result[uchild_index]) result[uchild_index] = updated_child;
+                if (child_drop < position[child_drop_index]) {
+                    position[child_drop_index] = child_drop;
+                }
             }
         }
 
-        // Push parent to close vector
         close.push_back(parent);
     }
 };
 
-int PathFinder::list_index(PathFinderNode& node, std::vector<PathFinderNode>& list)
+void PathFinder::generate_understack(Board& board, std::vector<PathFinderNode>& input, std::vector<PathFinderNode>& position)
 {
-    for (int i = 0; i < (int)list.size(); ++i) {
-        if (node.position == list[i].position) return i;
+    position.reserve(128);
+    position.clear();
+
+    for (int i = 0; i < int(input.size()); ++i) {
+        arrayvec<PathFinderNode, 4> children = arrayvec<PathFinderNode, 4>();
+        PathFinder::expand(board, input[i], children);
+
+        for (int c = 0; c < children.get_size(); ++c) {
+            if (board.is_above_stack(children[c].placement)) {
+                continue;
+            }
+
+            PathFinderNode child_drop;
+            PathFinder::attempt(board, children[c], child_drop, MOVE_DOWN);
+
+            if (PathFinder::index(child_drop, position) == -1) {
+                position.push_back(child_drop);
+            }
+        }
     }
-    return -1;
 };
 
 };
