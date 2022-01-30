@@ -28,12 +28,10 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_size, PieceType
             ++quiescence_depth;
         }
     }
-    if (bag_size <= 3) {
-        for (int i = 0; i < bag_size; ++i) {
-            if (bag[i] == PIECE_T) {
-                ++quiescence_depth;
-                break;
-            }
+    for (int i = 0; i < bag_size; ++i) {
+        if (bag[i] == PIECE_T) {
+            ++quiescence_depth;
+            break;
         }
     }
     Evaluator::quiescence(board, column_height, quiescence_depth, tspin_structure);
@@ -65,20 +63,15 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_size, PieceType
     int transition_row = Evaluator::transition_row(board, column_height);
     node.score.defence += transition_row * this->weight.defence.row_t;
 
-    // Column transition
-    int transition_column = Evaluator::transition_column(board, column_height);
-    node.score.defence += transition_column * this->weight.defence.column_t;
-
-    // Hole & crack
+    // Hole above & below min height
     int hole[2] = { 0, 0 };
     Evaluator::hole(board, column_height, min_height, hole);
-    node.score.defence += hole[0] * this->weight.defence.hole;
-    node.score.defence += hole[1] * this->weight.defence.crack;
+    node.score.defence += hole[0] * this->weight.defence.hole_a;
+    node.score.defence += hole[1] * this->weight.defence.hole_b;
 
     // Blocked hole
-    int blocked[2];
-    Evaluator::blocked(board, column_height, blocked);
-    node.score.defence += blocked[0] * this->weight.defence.blocked;
+    int blocked = Evaluator::blocked(board, column_height);
+    node.score.defence += blocked * this->weight.defence.blocked;
 
     // B2B
     node.score.defence += (node.state.b2b > 0) * this->weight.defence.b2b;
@@ -186,40 +179,35 @@ int Evaluator::transition_row(Board& board, int column_height[10])
     return result;
 };
 
-int Evaluator::transition_column(Board& board, int column_height[10])
-{
-    int result = 0;
-    for (int i = 0; i < 10; ++i) {
-        uint64_t xor_column = board[i] ^ ((board[i] << 1) | (uint64_t)1);
-        result += std::popcount(xor_column);
-    }
-    return result;
-};
-
 void Evaluator::hole(Board& board, int column_height[10], int min_height, int result[2])
 {
     for (int i = 0; i < 10; ++i) {
-        result[0] += column_height[i] - std::popcount(board[i]);
-        result[1] += column_height[i] - min_height - std::popcount(board[i] >> min_height);
+        result[0] += column_height[i] - min_height - std::popcount(board[i] >> min_height);
+        result[1] += column_height[i] - std::popcount(board[i]);
+        
     }
-    result[0] -= result[1];
+    result[1] -= result[0];
 };
 
-void Evaluator::blocked(Board& board, int column_height[10], int blocked[2])
+int Evaluator::blocked(Board& board, int column_height[10])
 {
-    blocked[0] = 0;
-    blocked[1] = 0;
+    int result = 0;
     for (int i = 0; i < 10; ++i) {
-        uint64_t hole_mask = (~board[i]) & (((uint64_t)1 << column_height[i]) - 1);
-        while (hole_mask != 0)
-        {
-            int hole_mask_trz = std::countr_zero(hole_mask);
-            int blocked_count = std::min(column_height[i] - hole_mask_trz - 1, 6);
-            blocked[0] += blocked_count;
-            blocked[1] += blocked_count * blocked_count;
-            hole_mask = hole_mask & (~((uint64_t)1 << hole_mask_trz));
+        uint64_t input = board[i] << (64 - column_height[i]);
+        int acc_y = 0;
+        while (true) {
+            int locnt = std::countl_one(input);
+            input = input << locnt;
+            if (acc_y + locnt >= column_height[i]) {
+                break;
+            }
+            int lzcnt = std::countl_zero(input);
+            input = input << lzcnt;
+            result += acc_y + locnt;
+            acc_y += locnt + lzcnt;
         }
     }
+    return result;
 };
 
 Piece Evaluator::structure(Board& board, int column_height[10])
@@ -355,7 +343,7 @@ int Evaluator::spike(Node& root, Node& node)
         ++attack;
     }
     if (line_clear > 0) {
-        attack += REN_LUT[std::min(root.state.ren, 11)];
+        attack += REN_LUT[std::min(root.state.ren, MAX_COMBO_TABLE_SIZE - 1)];
     }
 
     return line_clear + attack;
