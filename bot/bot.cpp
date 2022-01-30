@@ -25,74 +25,72 @@ void Bot::init_thread(BotSetting setting, PieceType queue[SEARCH_QUEUE_MAX], int
 
     // Start the thread
     this->thread = new std::thread([&](BotSetting bot_setting, BotState bot_state)
+    {
+        // Init search
+        Search search;
+        search.init(bot_state.queue, bot_state.queue_count);
+        search.evaluator.weight = bot_setting.weight;
+
+        int iter_num = 0;
+        int layer_index = 0;
+        int node_count = 0;
+        int depth = 0;
+
+        while (true)
         {
-            // Init search
-            Search search;
-            search.init(bot_state.queue, bot_state.queue_count);
-            search.evaluator.weight = bot_setting.weight;
+            // Search one iter
+            search.think(iter_num, layer_index, node_count);
+            ++iter_num;
+            depth = std::max(depth, layer_index + 1);
 
-            int iter_num = 0;
-            int layer_index = 0;
-            int node_count = 0;
-            int depth = 0;
+            std::unique_lock<std::mutex> lk(mutex);
 
-            while (true)
-            {
-                // Search one iter
-                search.think(iter_num, layer_index, node_count);
-                ++iter_num;
-                depth = std::max(depth, layer_index + 1);
+            // Get candidate list
+            if (state_buffer.empty() && action_buffer.empty() && iter_num > 5) {
+                BotCandidate new_candidate;
+                new_candidate.best = search.best;
+                new_candidate.root = search.state.root;
+                new_candidate.node = node_count;
+                new_candidate.depth = depth;
 
-                std::unique_lock<std::mutex> lk(mutex);
+                if (candidate_buffer.empty()) candidate_buffer.push_back(new_candidate);
+                candidate_buffer[0] = new_candidate;
+            }
 
-                // Get candidate list
-                if (state_buffer.empty() && action_buffer.empty()) {
-                    BotCandidate new_candidate;
-                    new_candidate.best = search.best;
-                    new_candidate.root = search.state.root;
-                    new_candidate.node = node_count;
-                    new_candidate.depth = depth;
+            // Set new game state
+            if (!state_buffer.empty()) {
+                iter_num = 0;
+                layer_index = 0;
+                node_count = 0;
+                depth = 0;
 
-                    if (candidate_buffer.empty()) candidate_buffer.push_back(new_candidate);
-                    candidate_buffer[0] = new_candidate;
-                }
+                search.reset(state_buffer[0].board, state_buffer[0].b2b, state_buffer[0].ren);
 
-                // Set new game state
-                if (!state_buffer.empty()) {
+                state_buffer.clear();
+            }
+
+            // Advance the tree
+            if (!action_buffer.empty()) {
+
+                bool success = search.advance(action_buffer[0].action, action_buffer[0].new_piece, action_buffer[0].new_piece_count);
+
+                if (success) {
                     iter_num = 0;
                     layer_index = 0;
                     node_count = 0;
                     depth = 0;
-
-                    search.reset(state_buffer[0].board, state_buffer[0].b2b, state_buffer[0].ren);
-
-                    state_buffer.clear();
                 }
 
-                // Advance the tree
-                if (!action_buffer.empty()) {
-
-                    bool success = search.advance(action_buffer[0].action, action_buffer[0].new_piece, action_buffer[0].new_piece_count);
-
-                    if (success) {
-                        iter_num = 0;
-                        layer_index = 0;
-                        node_count = 0;
-                        depth = 0;
-                    }
-
-                    action_buffer.clear();
-                }
-
-                // Break if not running
-                if (!running) break;
+                action_buffer.clear();
             }
-        }, setting, state);
+
+            // Break if not running
+            if (!running) break;
+        }
+    }, setting, state);
 };
 
-/*
-* Destroy the bot thread
-*/
+// Destroy the bot thread
 void Bot::end_thread()
 {
     {
@@ -108,10 +106,8 @@ void Bot::end_thread()
     action_buffer.clear();
 };
 
-/*
-* Set a new board state for the bot
-* Call this when misdrop of garbage received
-*/
+// Set a new board state for the bot
+// Call this when misdrop of garbage received
 void Bot::reset_state(Board board, int b2b, int ren)
 {
     // Init new state
@@ -127,9 +123,7 @@ void Bot::reset_state(Board board, int b2b, int ren)
     candidate_buffer.clear();
 };
 
-/*
-* Tell the board to play a move and advance the tree's state
-*/
+// Tell the board to play a move and advance the tree's state
 void Bot::advance_state(BotAction action)
 {
     std::unique_lock<std::mutex> lk(mutex);
@@ -138,10 +132,8 @@ void Bot::advance_state(BotAction action)
     candidate_buffer.clear();
 };
 
-/*
-* Request the currently best solution
-* Return true if new solution is found
-*/
+// Request the currently best solution
+// Return true if new solution is found
 bool Bot::request_solution(BotSolution& solution, int incomming_attack)
 {
     BotCandidate bot_candidate;
@@ -159,9 +151,7 @@ bool Bot::request_solution(BotSolution& solution, int incomming_attack)
     return true;
 };
 
-/*
-* Check if the bot thread is running
-*/
+// Check if the bot thread is running
 bool Bot::is_running()
 {
     std::unique_lock<std::mutex> lk(mutex);
