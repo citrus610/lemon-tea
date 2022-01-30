@@ -5,23 +5,23 @@
 class Battle
 {
 public:
-	Battle();
+    Battle();
 public:
-	std::vector<PieceType> bag;
+    std::vector<LemonTea::PieceType> bag;
 public:
-	Player player_1;
-	Player player_2;
+    Player player_1;
+    Player player_2;
 public:
-	Tree bot_1;
-	Tree bot_2;
-	std::vector<MoveType> movement_1;
-	std::vector<MoveType> movement_2;
+    LemonTea::Search bot_1;
+    LemonTea::Search bot_2;
+    std::vector<LemonTea::MoveType> movement_1;
+    std::vector<LemonTea::MoveType> movement_2;
 public:
-	void init();
-	void update();
-	void update_player(Player& player, Tree& bot, std::vector<MoveType>& movement);
-	void render();
+    void init();
+    void update();
+    void update_player(Player& player, LemonTea::Search& bot, std::vector<LemonTea::MoveType>& movement);
+    void render();
 public:
-	bool is_gameover();
-	int get_winner();
+    bool is_gameover();
+    int get_winner();
 };

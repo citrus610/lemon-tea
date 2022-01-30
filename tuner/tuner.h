@@ -7,12 +7,12 @@
 class Tuner
 {
 public:
-	Tuner();
+    Tuner();
 public:
-	Battle battle;
-	Compare compare;
-	Spsa rng;
+    Battle battle;
+    Compare compare;
+    Spsa rng;
 public:
-	void start();
+    void start();
 };
 

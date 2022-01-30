@@ -8,13 +8,13 @@ constexpr int COMPARE_MAX_BATTLE = 1000;
 
 class Compare
 {
-	std::mutex mutex;
+    std::mutex mutex;
 public:
-	void save_json(SaveData& save_data, int batch_id);
-	void load_json(SaveData& save_data, int batch_id);
+    void save_json(LemonTea::SaveData& save_data, int batch_id);
+    void load_json(LemonTea::SaveData& save_data, int batch_id);
 public:
-	SaveData data;
+    LemonTea::SaveData data;
 public:
-	void start(Weight base, Weight w1, Weight w2, int total, int batch_id, int thread);
+    void start(LemonTea::Weight base, LemonTea::Weight w1, LemonTea::Weight w2, int total, int batch_id, int thread);
 };
 

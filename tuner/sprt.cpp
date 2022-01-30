@@ -7,7 +7,7 @@ double Sprt::elo_diff_to_win_rate(double elo_diff)
 
 double Sprt::log_likelihood_ratio_approximate(double win, double draw, double loss, double elo_diff_0, double elo_diff_1)
 {
-    if (win == 0 || draw == 0 || loss == 0) {
+    if (win == 0 || loss == 0) {
         return 0.0;
     }
 
