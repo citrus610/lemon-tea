@@ -88,7 +88,7 @@ void Piece::place(Board& board)
     for (int i = 0; i < 4; ++i) {
         int8_t cell_x = PIECE_LUT[this->type][this->rotation][i][0] + this->x;
         int8_t cell_y = PIECE_LUT[this->type][this->rotation][i][1] + this->y;
-        board.data[cell_x] |= ((uint64_t)1 << cell_y);
+        board.data[cell_x] |= (1ULL << cell_y);
     }
 };
 
@@ -255,7 +255,7 @@ int Board::get_drop_distance(Piece& piece)
     for (int i = 0; i < 4; ++i) {
         int cell_x = piece.x + PIECE_LUT[piece.type][piece.rotation][i][0];
         int cell_y = piece.y + PIECE_LUT[piece.type][piece.rotation][i][1];
-        int cell_distance = cell_y - 64 + std::countl_zero(this->data[cell_x] & (((uint64_t)1 << cell_y) - 1));
+        int cell_distance = cell_y - 64 + std::countl_zero(this->data[cell_x] & ((1ULL << cell_y) - 1));
         result = std::min(result, cell_distance);
     }
     return result;
@@ -360,7 +360,7 @@ int Board::clear_line()
     int mask_tzcnt = std::countr_zero(mask);
     mask = mask >> mask_tzcnt;
     for (int i = 0; i < 10; ++i) {
-        uint64_t low_part = this->data[i] & (((uint64_t)1 << mask_tzcnt) - 1);
+        uint64_t low_part = this->data[i] & ((1ULL << mask_tzcnt) - 1);
         uint64_t high_part = this->data[i] >> mask_tzcnt;
         switch (mask)
         {

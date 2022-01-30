@@ -46,10 +46,10 @@ public:
     uint64_t get_mask();
 public:
     bool is_occupied(const int8_t& x, const int8_t& y);
-	bool is_colliding(const int8_t& x, const int8_t& y, const PieceType& type, const PieceRotation& rotation);
-	bool is_colliding(Piece& piece);
-	bool is_above_stack(Piece& piece);
-	bool is_tspin(Piece& piece);
+    bool is_colliding(const int8_t& x, const int8_t& y, const PieceType& type, const PieceRotation& rotation);
+    bool is_colliding(Piece& piece);
+    bool is_above_stack(Piece& piece);
+    bool is_tspin(Piece& piece);
     bool is_perfect();
 public:
     int clear_line();
