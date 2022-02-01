@@ -109,7 +109,7 @@ static std::string convert_move_to_string(MoveType move) {
         return std::string("DROP");
         break;
     default:
-        return std::string("MOVE NONE");
+        return std::string("NONE");
         break;
     }
 };
@@ -198,6 +198,62 @@ static void draw_move_gen(Board& board, PieceType piece) {
         draw_board(copy);
         draw_piece_data(list[i]);
         std::cin.get();
+    }
+};
+
+static void draw_path_finder(Board board, Piece destination)
+{
+    LemonTea::MoveType move[32];
+    int move_cnt = 0;
+
+    PathFinder::search(board, destination, move, move_cnt);
+
+    Piece piece = {
+        .x = 4,
+        .y = 19,
+        .type = destination.type,
+        .rotation = PIECE_UP
+    };
+
+    if (board.is_colliding(piece)) {
+        piece.y = 20;
+    }
+
+    {
+        Board copy = board;
+        piece.place(copy);
+        draw_board(copy);
+        std::cin.get();
+        system("cls");
+    }
+
+    for (int i = 0; i < move_cnt; ++i) {
+        Board copy = board;
+        switch (move[i])
+        {
+        case MOVE_RIGHT:
+            piece.move_right(board);
+            break;
+        case MOVE_LEFT:
+            piece.move_left(board);
+            break;
+        case MOVE_CW:
+            piece.move_cw(board);
+            break;
+        case MOVE_CCW:
+            piece.move_ccw(board);
+            break;
+        case MOVE_DOWN:
+            piece.move_drop(board);
+            break;
+        default:
+            break;
+        }
+        piece.place(copy);
+        draw_board(copy);
+        std::cout << "move: " << convert_move_to_string(move[i]) << std::endl;
+        std::cin.get();
+        system("cls");
     }
 };
 

@@ -57,33 +57,33 @@ constexpr Weight DEFAULT_WEIGHT()
 {
     Weight result;
 
-    result.attack.clear[0] = -300;
+    result.attack.clear[0] = -305;
     result.attack.clear[1] = -250;
-    result.attack.clear[2] = -200;
-    result.attack.clear[3] = 300;
-    result.attack.tspin[0] = 50;
-    result.attack.tspin[1] = 400;
-    result.attack.tspin[2] = 700;
+    result.attack.clear[2] = -215;
+    result.attack.clear[3] = 305;
+    result.attack.tspin[0] = 52;
+    result.attack.tspin[1] = 397;
+    result.attack.tspin[2] = 705;
     result.attack.pc = 1500;
-    result.attack.waste_time = -30;
-    result.attack.waste_T = -150;
-    result.attack.b2b = 105;
-    result.attack.ren = 200;
+    result.attack.waste_time = -29;
+    result.attack.waste_T = -129;
+    result.attack.b2b = 119;
+    result.attack.ren = 184;
 
-    result.defence.height = -40;
+    result.defence.height = -41;
     result.defence.height_10 = -150;
     result.defence.height_15 = -600;
-    result.defence.bumpiness = -26;
+    result.defence.bumpiness = -28;
     result.defence.bumpiness_s = -7;
-    result.defence.flat = 14;
-    result.defence.row_t = -5;
-    result.defence.hole_a = -306;
-    result.defence.hole_b = -293;
+    result.defence.flat = 15;
+    result.defence.row_t = -7;
+    result.defence.hole_a = -305;
+    result.defence.hole_b = -291;
     result.defence.blocked = -32;
-    result.defence.well = 35;
-    result.defence.structure[0] = 100;
-    result.defence.structure[1] = 150;
-    result.defence.structure[2] = 200;
+    result.defence.well = 43;
+    result.defence.structure[0] = 99;
+    result.defence.structure[1] = 149;
+    result.defence.structure[2] = 199;
     result.defence.structure[3] = 500;
     result.defence.b2b = 62;
 
