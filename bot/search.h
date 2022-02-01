@@ -3,12 +3,15 @@
 #include "eval.h"
 #include "movegen.h"
 #include "layer.h"
+#include "tranposition.h"
 
 namespace LemonTea
 {
 
 constexpr int SEARCH_QUEUE_MAX = 16;
 constexpr int SEARCH_PRUNE = 8;
+constexpr int SEARCH_TABLE_POWER_SIZE = 5;
+constexpr int SEARCH_TABLE_POWER[SEARCH_QUEUE_MAX] = { 0, 8, 9, 9, 10 };
 
 struct SearchBest {
     Node node;
@@ -29,6 +32,7 @@ public:
     SearchState state;
     SearchBest best;
     Layer layer[SEARCH_QUEUE_MAX];
+    TranpositionTable table[SEARCH_QUEUE_MAX];
     Evaluator evaluator;
     int beam = 200;
 public:
@@ -37,8 +41,8 @@ public:
     bool advance(NodeAction action, PieceType* new_piece, int new_piece_count);
     void clear();
 public:
-    void expand_node(Node& parent, Layer& new_layer, int& node_count);
-    void expand_layer(Layer& previous_layer, Layer& new_layer, int& width, int& node_count);
+    void expand_node(Node& parent, Layer& new_layer, int table_index, int& node_count);
+    void expand_layer(Layer& previous_layer, Layer& new_layer, int table_index, int& node_count);
     void search(int iteration, int& node, int& depth);
     void think(int& iter_num, int& layer_index, int& node_count);
     Node solution(int incomming_attack);

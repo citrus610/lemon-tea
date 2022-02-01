@@ -10,9 +10,12 @@ void Search::init(PieceType* init_queue, int queue_count)
     this->best = SearchBest();
     this->evaluator.weight = DEFAULT_WEIGHT();
 
-    // Init memory
+    // Init memory for layer and table
     for (int i = 0; i < SEARCH_QUEUE_MAX; ++i) {
+        this->layer[i] = Layer();
+        this->table[i] = TranpositionTable();
         this->layer[i].init();
+        this->table[i].init(SEARCH_TABLE_POWER[std::min(i, SEARCH_TABLE_POWER_SIZE - 1)]);
     }
     this->clear();
 
@@ -51,7 +54,7 @@ void Search::reset(Board board, int b2b, int ren)
     // Reset best node
     this->best = SearchBest();
 
-    // Clear layer
+    // Clear layer & table
     this->clear();
 };
 
@@ -107,7 +110,7 @@ bool Search::advance(NodeAction action, PieceType* new_piece, int new_piece_coun
     // Reset best node
     this->best = SearchBest();
 
-    // Clear layer
+    // Clear layer & table
     this->clear();
 
     return true;
@@ -118,10 +121,11 @@ void Search::clear()
     for (int i = 0; i < SEARCH_QUEUE_MAX; ++i) {
         this->layer[i].data.clear();
         this->layer[i].taken_count = 0;
+        this->table[i].clear();
     }
 };
 
-void Search::expand_node(Node& parent, Layer& new_layer, int& node_count)
+void Search::expand_node(Node& parent, Layer& new_layer, int table_index, int& node_count)
 {
     // Sanity check
     if (parent.state.current == PIECE_NONE) return;
@@ -136,7 +140,25 @@ void Search::expand_node(Node& parent, Layer& new_layer, int& node_count)
         this->evaluator.evaluate(child, this->state.queue.iter_begin(), this->state.queue.get_size(), this->state.bag.iter_begin(), this->state.bag.get_size());
         if (parent.origin.placement.type == PIECE_NONE) child.origin = child.action;
         if (this->best.node < child) this->best.node = child;
-        if (child.state.current != PIECE_NONE) new_layer.data.push_back(child);
+        if (child.state.current != PIECE_NONE) {
+            if (table_index == 0) {
+                new_layer.data.push_back(child);
+            }
+            else {
+                uint32_t tt_hash = TranpositionTable::hash(child.state.board);
+                int32_t tt_attack = 0;
+                if (this->table[table_index].get(tt_hash, tt_attack)) {
+                    if (tt_attack < child.score.attack) {
+                        new_layer.data.push_back(child);
+                        this->table[table_index].add(tt_hash, child.score.attack);
+                    }
+                }
+                else {
+                    new_layer.data.push_back(child);
+                    this->table[table_index].add(tt_hash, child.score.attack);
+                }
+            }
+        }
     }
     node_count += current_list_count;
 
@@ -160,19 +182,38 @@ void Search::expand_node(Node& parent, Layer& new_layer, int& node_count)
             this->evaluator.evaluate(child, this->state.queue.iter_begin(), this->state.queue.get_size(), this->state.bag.iter_begin(), this->state.bag.get_size());
             if (parent.origin.placement.type == PIECE_NONE) child.origin = child.action;
             if (this->best.node < child) this->best.node = child;
-            if (child.state.current != PIECE_NONE) new_layer.data.push_back(child);
+            // if (child.state.current != PIECE_NONE) new_layer.data.push_back(child);
+            if (child.state.current != PIECE_NONE) {
+                if (table_index == 0) {
+                    new_layer.data.push_back(child);
+                }
+                else {
+                    uint32_t tt_hash = TranpositionTable::hash(child.state.board);
+                    int32_t tt_attack = 0;
+                    if (this->table[table_index].get(tt_hash, tt_attack)) {
+                        if (tt_attack < child.score.attack) {
+                            new_layer.data.push_back(child);
+                            this->table[table_index].add(tt_hash, child.score.attack);
+                        }
+                    }
+                    else {
+                        new_layer.data.push_back(child);
+                        this->table[table_index].add(tt_hash, child.score.attack);
+                    }
+                }
+            }
         }
         node_count += hold_list_count;
     }
 };
 
-void Search::expand_layer(Layer& previous_layer, Layer& new_layer, int& width, int& node_count)
+void Search::expand_layer(Layer& previous_layer, Layer& new_layer, int table_index, int& node_count)
 {
-    int max_pop = std::min(width, (int)previous_layer.data.size());
+    int max_pop = std::min(this->beam, (int)previous_layer.data.size());
 
     for (int i = 0; i < max_pop; ++i) {
         // Expand the best node
-        this->expand_node(previous_layer.data[0], new_layer, node_count);
+        this->expand_node(previous_layer.data[0], new_layer, table_index, node_count);
 
         // Pop
         std::pop_heap(previous_layer.data.data(), previous_layer.data.data() + previous_layer.data.size());
@@ -210,7 +251,7 @@ void Search::think(int& iter_num, int& layer_index, int& node_count)
 {
     // Force level 1 search
     if (iter_num == 0) {
-        this->expand_node(this->state.root, this->layer[0], node_count);
+        this->expand_node(this->state.root, this->layer[0], 0, node_count);
         if (!this->layer[0].data.empty()) {
             this->best.node = this->layer[0].data[0];
             for (int i = 0; i < (int)this->layer[0].data.size(); ++i) {
@@ -239,7 +280,7 @@ void Search::think(int& iter_num, int& layer_index, int& node_count)
     }
 
     // Expand the layer
-    this->expand_layer(this->layer[layer_index], this->layer[layer_index + 1], this->beam, node_count);
+    this->expand_layer(this->layer[layer_index], this->layer[layer_index + 1], layer_index + 1, node_count);
 
     // Update layer index
     ++layer_index;
