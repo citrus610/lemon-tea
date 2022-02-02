@@ -13,7 +13,7 @@ void Search::init(PieceType* init_queue, int queue_count)
     // Init memory for layer and table
     for (int i = 0; i < SEARCH_QUEUE_MAX; ++i) {
         this->layer[i] = Layer();
-        this->table[i] = TranpositionTable();
+        this->table[i] = TranspositionTable();
         this->layer[i].init();
         this->table[i].init(SEARCH_TABLE_POWER[std::min(i, SEARCH_TABLE_POWER_SIZE - 1)]);
     }
@@ -145,7 +145,7 @@ void Search::expand_node(Node& parent, Layer& new_layer, int table_index, int& n
                 new_layer.data.push_back(child);
             }
             else {
-                uint32_t tt_hash = TranpositionTable::hash(child.state.board);
+                uint32_t tt_hash = TranspositionTable::hash(child.state.board);
                 int32_t tt_attack = 0;
                 if (this->table[table_index].get(tt_hash, tt_attack)) {
                     if (tt_attack < child.score.attack) {
@@ -188,7 +188,7 @@ void Search::expand_node(Node& parent, Layer& new_layer, int table_index, int& n
                     new_layer.data.push_back(child);
                 }
                 else {
-                    uint32_t tt_hash = TranpositionTable::hash(child.state.board);
+                    uint32_t tt_hash = TranspositionTable::hash(child.state.board);
                     int32_t tt_attack = 0;
                     if (this->table[table_index].get(tt_hash, tt_attack)) {
                         if (tt_attack < child.score.attack) {

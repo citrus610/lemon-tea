@@ -3,7 +3,7 @@
 #include "eval.h"
 #include "movegen.h"
 #include "layer.h"
-#include "tranposition.h"
+#include "transposition.h"
 
 namespace LemonTea
 {
@@ -32,7 +32,7 @@ public:
     SearchState state;
     SearchBest best;
     Layer layer[SEARCH_QUEUE_MAX];
-    TranpositionTable table[SEARCH_QUEUE_MAX];
+    TranspositionTable table[SEARCH_QUEUE_MAX];
     Evaluator evaluator;
     int beam = 200;
 public:
