@@ -6,29 +6,29 @@
 namespace LemonTea
 {
 
-constexpr int TRANPOSITION_BUCKET_SIZE = 4;
+constexpr int TRANSPOSITION_BUCKET_SIZE = 4;
 
-class TranpositionEntry
+class TranspositionEntry
 {
 public:
     uint32_t key = 0;
     int32_t attack = 0;
 };
 
-class TranpositionBucket
+class TranspositionBucket
 {
 public:
-    TranpositionEntry slot[TRANPOSITION_BUCKET_SIZE] = { 0 };
+    TranspositionEntry slot[TRANSPOSITION_BUCKET_SIZE] = { 0 };
 };
 
-class TranpositionTable
+class TranspositionTable
 {
 public:
-    TranpositionBucket* bucket = nullptr;
+    TranspositionBucket* bucket = nullptr;
     uint32_t size = 0;
 public:
-    TranpositionTable();
-    ~TranpositionTable();
+    TranspositionTable();
+    ~TranspositionTable();
 public:
     static uint32_t hash(Board& board);
 public:
