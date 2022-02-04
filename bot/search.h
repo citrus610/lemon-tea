@@ -8,7 +8,7 @@
 namespace LemonTea
 {
 
-constexpr int SEARCH_QUEUE_MAX = 16;
+constexpr int SEARCH_QUEUE_MAX = 12;
 constexpr int SEARCH_PRUNE = 8;
 constexpr int SEARCH_TABLE_POWER_SIZE = 5;
 constexpr int SEARCH_TABLE_POWER[SEARCH_QUEUE_MAX] = { 0, 8, 9, 9, 10 };

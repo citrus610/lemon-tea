@@ -22,19 +22,19 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_size, PieceType
 
     // Quiescence
     int tspin_structure[4] = { 0, 0, 0, 0 };
-    int quiescence_depth = (node.state.hold == PIECE_T) + (node.state.current == PIECE_T);
+    int donation_depth = (node.state.hold == PIECE_T) + (node.state.current == PIECE_T);
     for (int i = node.state.next; i < queue_size; ++i) {
         if (queue[i] == PIECE_T) {
-            ++quiescence_depth;
+            ++donation_depth;
         }
     }
     for (int i = 0; i < bag_size; ++i) {
         if (bag[i] == PIECE_T) {
-            ++quiescence_depth;
+            ++donation_depth;
             break;
         }
     }
-    Evaluator::quiescence(board, column_height, quiescence_depth, tspin_structure);
+    Evaluator::donation(board, column_height, donation_depth, tspin_structure);
 
     // Structure
     node.score.defence += tspin_structure[0] * this->weight.defence.structure[0];
@@ -51,6 +51,24 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_size, PieceType
     int well_depth = Evaluator::well(board, column_height, well_position);
     int min_height = column_height[well_position];
     node.score.defence += well_depth * this->weight.defence.well;
+
+    // Perfect tetris
+    int ptetris_depth = (node.state.hold == PIECE_I) + (node.state.current == PIECE_I);
+    for (int i = node.state.next; i < queue_size; ++i) {
+        if (queue[i] == PIECE_I) {
+            ++ptetris_depth;
+            break;
+        }
+    }
+    for (int i = 0; i < bag_size; ++i) {
+        if (bag[i] == PIECE_I) {
+            ++ptetris_depth;
+            break;
+        }
+    }
+    if (ptetris_depth > 0) {
+        Evaluator::perfect_tetris(board, column_height, well_position);
+    }
 
     // Bumpiness
     int bumpiness[3] = { 0, 0, 0 };
@@ -193,18 +211,12 @@ int Evaluator::blocked(Board& board, int column_height[10])
 {
     int result = 0;
     for (int i = 0; i < 10; ++i) {
-        uint64_t input = board[i] << (64 - column_height[i]);
-        int acc_y = 0;
-        while (true) {
-            int locnt = std::countl_one(input);
-            input = input << locnt;
-            if (acc_y + locnt >= column_height[i]) {
-                break;
-            }
-            int lzcnt = std::countl_zero(input);
-            input = input << lzcnt;
-            result += acc_y + locnt;
-            acc_y += locnt + lzcnt;
+        uint64_t hole_mask = (~board[i]) & ((1ULL << column_height[i]) - 1);
+        while (hole_mask != 0)
+        {
+            int hole_mask_trz = std::countr_zero(hole_mask);
+            result += std::min(column_height[i] - hole_mask_trz - 1, 6);
+            hole_mask = hole_mask & (~(1ULL << hole_mask_trz));
         }
     }
     return result;
@@ -278,7 +290,7 @@ Piece Evaluator::structure(Board& board, int column_height[10])
     };
 };
 
-void Evaluator::quiescence(Board& board, int column_height[10], int depth, int tspin_structure[4])
+void Evaluator::donation(Board& board, int column_height[10], int depth, int tspin_structure[4])
 {
     for (int i = 0; i < depth; ++i) {
         Board copy = board;
@@ -294,6 +306,23 @@ void Evaluator::quiescence(Board& board, int column_height[10], int depth, int t
         else {
             break;
         }
+    }
+};
+
+void Evaluator::perfect_tetris(Board& board, int column_height[10], int well_index)
+{
+    Board copy = board;
+    Piece quiet_piece = {
+        .x = (int8_t)well_index,
+        .y = (int8_t)(column_height[well_index] + 2),
+        .type = PIECE_I,
+        .rotation = PIECE_RIGHT
+    };
+    quiet_piece.place(copy);
+    int line_clear = copy.clear_line();
+    if (line_clear == 4) {
+        board = copy;
+        board.get_height(column_height);
     }
 };
 

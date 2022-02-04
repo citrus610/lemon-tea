@@ -49,7 +49,8 @@ public:
     static void hole(Board& board, int column_height[10], int min_height, int result[2]);
     static int blocked(Board& board, int column_height[10]);
     static Piece structure(Board& board, int column_height[10]);
-    static void quiescence(Board& board, int column_height[10], int depth, int tspin_structure[4]);
+    static void donation(Board& board, int column_height[10], int depth, int tspin_structure[4]);
+    static void perfect_tetris(Board& board, int column_height[10], int well_index);
     static int spike(Node& root, Node& node);
 };
 
