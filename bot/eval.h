@@ -71,10 +71,10 @@ constexpr Weight DEFAULT_WEIGHT()
     result.attack.tspin[2] = 705;
     result.attack.pc = 1500;
     result.attack.waste_time = -17;
-    result.attack.waste_T = -133;
+    result.attack.waste_T = -134;
     result.attack.b2b = 144;
-    result.attack.ren = 158;
-    result.attack.ren_10 = 20;
+    result.attack.ren = 162;
+    result.attack.ren_10 = 5;
     result.attack.ren_15 = 50;
 
     result.defence.height = -41;
@@ -88,12 +88,12 @@ constexpr Weight DEFAULT_WEIGHT()
     result.defence.hole_b = -452;
     result.defence.blocked = -32;
     result.defence.well = 56;
-    result.defence.sidewell = -20;
+    result.defence.sidewell = -21;
     result.defence.structure[0] = 113;
     result.defence.structure[1] = 152;
     result.defence.structure[2] = 243;
     result.defence.structure[3] = 502;
-    result.defence.b2b = 115;
+    result.defence.b2b = 118;
 
     return result;
 };
