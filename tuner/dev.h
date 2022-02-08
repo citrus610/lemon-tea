@@ -37,7 +37,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WeightAttack,
     waste_time,
     waste_T,
     b2b,
-    ren
+    ren,
+    ren_10,
+    ren_15
 )
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WeightDefence,
@@ -52,6 +54,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WeightDefence,
     hole_b,
     blocked,
     well,
+    sidewell,
     structure[0],
     structure[1],
     structure[2],

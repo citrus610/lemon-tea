@@ -8,16 +8,14 @@ namespace LemonTea
 
 constexpr int TRANSPOSITION_BUCKET_SIZE = 4;
 
-class TranspositionEntry
+struct TranspositionEntry
 {
-public:
     uint32_t key = 0;
-    int32_t attack = 0;
+    int32_t eval = 0;
 };
 
-class TranspositionBucket
+struct TranspositionBucket
 {
-public:
     TranspositionEntry slot[TRANSPOSITION_BUCKET_SIZE] = { 0 };
 };
 
@@ -36,9 +34,10 @@ public:
     void destroy();
 public:
     void clear();
-    bool get(uint32_t hash, int& attack);
-    bool add(uint32_t hash, int attack);
-    int hashfull();
+    bool get(uint32_t hash, int& eval);
+    bool add(uint32_t hash, int eval);
+    bool addible(uint32_t hash, int eval);
+    double hashfull();
 };
 
 };

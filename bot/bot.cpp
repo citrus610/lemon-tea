@@ -46,7 +46,7 @@ void Bot::init_thread(BotSetting setting, PieceType queue[SEARCH_QUEUE_MAX], int
             std::unique_lock<std::mutex> lk(mutex);
 
             // Get candidate list
-            if (state_buffer.empty() && action_buffer.empty() && iter_num > 5) {
+            if (state_buffer.empty() && action_buffer.empty() && iter_num > 4) {
                 BotCandidate new_candidate;
                 new_candidate.best = search.best;
                 new_candidate.root = search.state.root;

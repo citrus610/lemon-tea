@@ -40,12 +40,23 @@ public:
     void attempt(Piece& placement, bool hold, PieceType* queue, int queue_size);
 };
 
+struct NodeForecast
+{
+    Node parent = Node();
+    arrayvec<Node, 7> children = arrayvec<Node, 7>();
+    arrayvec<PieceType, 7> bag = arrayvec<PieceType, 7>();
+};
+
 static bool operator < (NodeScore& a, NodeScore& b) {
     return a.attack + a.defence < b.attack + b.defence;
 }
 
 static bool operator < (Node& a, Node& b) {
     return a.score < b.score;
+}
+
+static bool operator < (NodeForecast& a, NodeForecast& b) {
+    return a.parent < b.parent;
 }
 
 };

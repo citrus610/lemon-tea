@@ -41,6 +41,7 @@ void Tuner::start()
     system("CLS");
     cout << "How many threads?" << endl;
     cin >> thread_cnt;
+    system("CLS");
 
     // Main loop
     while (true)

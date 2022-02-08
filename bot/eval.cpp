@@ -52,6 +52,11 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_size, PieceType
     int min_height = column_height[well_position];
     node.score.defence += well_depth * this->weight.defence.well;
 
+    // Side well
+    if (well_position == 0 || well_position == 9) {
+        node.score.defence += well_depth * this->weight.defence.sidewell;
+    }
+
     // Perfect tetris
     int ptetris_depth = (node.state.hold == PIECE_I) + (node.state.current == PIECE_I);
     for (int i = node.state.next; i < queue_size; ++i) {
@@ -150,7 +155,14 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_size, PieceType
     node.score.attack += (node.state.b2b > 1) * this->weight.attack.b2b;
 
     // REN
-    node.score.attack += REN_LUT[std::min(node.state.ren, MAX_COMBO_TABLE_SIZE - 1)] * this->weight.attack.ren;
+    int ren = REN_LUT[std::min(node.state.ren, MAX_COMBO_TABLE_SIZE - 1)];
+    node.score.attack += ren * this->weight.attack.ren;
+    if (max_height >= 10) {
+        node.score.attack += ren * this->weight.attack.ren_10;
+    }
+    if (max_height >= 15) {
+        node.score.attack += ren * this->weight.attack.ren_15;
+    }
 };
 
 int Evaluator::well(Board& board, int column_height[10], int& well_position)
@@ -324,6 +336,15 @@ void Evaluator::perfect_tetris(Board& board, int column_height[10], int well_ind
         board = copy;
         board.get_height(column_height);
     }
+};
+
+int Evaluator::ren_sum(int ren)
+{
+    int result = 0;
+    for (int i = 3; i <= ren; ++i) {
+        result += REN_LUT[std::min(i, MAX_COMBO_TABLE_SIZE - 1)];
+    }
+    return result;
 };
 
 int Evaluator::spike(Node& root, Node& node)

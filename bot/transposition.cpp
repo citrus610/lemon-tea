@@ -48,15 +48,15 @@ void TranspositionTable::clear()
 
 // Add an entry to the table
 // Return true if add successfully
-bool TranspositionTable::add(uint32_t hash, int attack)
+bool TranspositionTable::add(uint32_t hash, int eval)
 {
     TranspositionEntry* slot = this->bucket[hash & (this->size - 1)].slot;
 
     // If there is matching hash key, replace if new attack is better
     for (int i = 0; i < TRANSPOSITION_BUCKET_SIZE; ++i) {
         if (slot[i].key == hash) {
-            if (slot[i].attack < attack) {
-                slot[i].attack = attack;
+            if (slot[i].eval < eval) {
+                slot[i].eval = eval;
                 return true;
             }
             return false;
@@ -65,9 +65,9 @@ bool TranspositionTable::add(uint32_t hash, int attack)
 
     // Else, if there is an empty slot in the bucket, just fill in
     for (int i = 0; i < TRANSPOSITION_BUCKET_SIZE; ++i) {
-        if (slot[i].key == 0 && slot[i].attack == 0) {
+        if (slot[i].key == 0 && slot[i].eval == 0) {
             slot[i].key = hash;
-            slot[i].attack = attack;
+            slot[i].eval = eval;
             return true;
         }
     }
@@ -75,13 +75,13 @@ bool TranspositionTable::add(uint32_t hash, int attack)
     // Else, try to replace the slot with smallest attack eval
     int smallest_attack_index = 0;
     for (int i = 1; i < TRANSPOSITION_BUCKET_SIZE; ++i) {
-        if (slot[i].attack < slot[smallest_attack_index].attack) {
+        if (slot[i].eval < slot[smallest_attack_index].eval) {
             smallest_attack_index = i;
         }
     }
-    if (slot[smallest_attack_index].attack < attack) {
+    if (slot[smallest_attack_index].eval < eval) {
         slot[smallest_attack_index].key = hash;
-        slot[smallest_attack_index].attack = attack;
+        slot[smallest_attack_index].eval = eval;
         return true;
     }
 
@@ -90,31 +90,44 @@ bool TranspositionTable::add(uint32_t hash, int attack)
 
 // Get the Transposition entry
 // Return true if found matching key
-bool TranspositionTable::get(uint32_t hash, int& attack)
+bool TranspositionTable::get(uint32_t hash, int& eval)
 {
     TranspositionEntry* slot = this->bucket[hash & (this->size - 1)].slot;
     for (int i = 0; i < TRANSPOSITION_BUCKET_SIZE; ++i) {
         if (slot[i].key == hash) {
-            attack = slot[i].attack;
+            eval = slot[i].eval;
             return true;
         }
     }
     return false;
 };
 
-// Take a sample of the first 1000 buckets in the table
-// Estimate the permill of used buckets in hash table
-int TranspositionTable::hashfull()
+// Return true if the new entry can be add
+bool TranspositionTable::addible(uint32_t hash, int eval)
+{
+    int32_t tt_eval;
+    if (this->get(hash, tt_eval)) {
+        if (tt_eval < eval) {
+            return true;
+        }
+        return false;
+    }
+    return true;
+};
+
+// Take a sample of the buckets in the table
+// Estimate the percent of used buckets in hash table
+double TranspositionTable::hashfull()
 {
     int used = 0;
-    for (uint32_t i = 0; i < std::min(uint32_t(1000), this->size); ++i) {
+    for (uint32_t i = 0; i < this->size; ++i) {
         for (int k = 0; k < TRANSPOSITION_BUCKET_SIZE; ++k) {
             if (this->bucket[i].slot[k].key != 0) {
                 used += 1;
             }
         }
     }
-    return used / TRANSPOSITION_BUCKET_SIZE;
+    return double(used) / double(TRANSPOSITION_BUCKET_SIZE) / double(this->size) * 100.0;
 };
 
 };

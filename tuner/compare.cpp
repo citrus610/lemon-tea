@@ -54,13 +54,35 @@ void Compare::start(LemonTea::Weight base, LemonTea::Weight w1, LemonTea::Weight
         // Main loop
         while (true)
         {
-            // If sprt ok or reach max number of match, break
             {
                 std::unique_lock<std::mutex> lk(mutex);
                 double win = (double)this->data.win_v1;
                 double loss = (double)this->data.win_v2;
                 double draw = (double)(this->data.total - this->data.win_v1 - this->data.win_v2);
-                if (Sprt::sprt(win, draw, loss, -5.0, 5.0, 0.05, 0.05) != SPRT_NULL) {
+
+                // Draw to console prettily
+                system("cls");
+                std::cout << std::fixed << std::setprecision(2);
+                std::cout << "GEN: " << id << std::endl;
+                std::cout << "PROGRESS: " << (double(this->data.total) / double(total_cnt) * 100.0) << "%" << std::endl;
+                std::cout << "------------------------------------------" << std::endl;
+                std::cout << "ELO: " 
+                    << Sprt::win_rate_to_elo_diff((win + draw / 2.0) / double(this->data.total)) 
+                    << " +- " << Sprt::win_rate_to_elo_error_margin(win, draw, loss)
+                    << " (95%)"
+                    << std::endl;
+                std::cout << "LLR: " 
+                    << Sprt::log_likelihood_ratio_approximate(win, draw, loss, -5.0, 5.0)
+                    << " (-2.94, 2.94) [-5, 5]"
+                    << std::endl;
+                std::cout << "Total: " << this->data.total
+                    << " W: " << this->data.win_v1
+                    << " D: " << int(draw)
+                    << " L: " << this->data.win_v2
+                    << std::endl;
+
+                // If sprt ok or reach max number of match, break
+                if (Sprt::sprt(win, draw, loss, -5.0, 5.0, 0.15, 0.15) != SPRT_NULL) {
                     save_json(this->data, id);
                     break;
                 }

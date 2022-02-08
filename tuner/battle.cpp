@@ -77,7 +77,7 @@ void Battle::update_player(Player& player, LemonTea::Search& bot, std::vector<Le
         // Search
         int bot_node = 0;
         int bot_depth = 0;
-        bot.search(5, bot_node, bot_depth);
+        bot.search(4, bot_node, bot_depth);
 
         // Get solution
         LemonTea::NodeAction action = bot.solution(player.incomming_garbage).origin;
