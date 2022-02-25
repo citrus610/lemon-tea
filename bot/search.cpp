@@ -283,13 +283,13 @@ void Search::forecast(NodeForecast& fnode, int& node_count)
     }
 
     // Set the fnode's parent's score to be the average of all the best possible child
-    fnode.parent.score = NodeScore();
-    for (int i = 0; i < fnode.children.get_size(); ++i) {
-        fnode.parent.score.attack += fnode.children[i].score.attack;
-        fnode.parent.score.defence += fnode.children[i].score.defence;
-    }
-    fnode.parent.score.attack = fnode.parent.score.attack / fnode.children.get_size();
-    fnode.parent.score.defence = fnode.parent.score.defence / fnode.children.get_size();
+    // fnode.parent.score = NodeScore();
+    // for (int i = 0; i < fnode.children.get_size(); ++i) {
+    //     fnode.parent.score.attack += fnode.children[i].score.attack;
+    //     fnode.parent.score.defence += fnode.children[i].score.defence;
+    // }
+    // fnode.parent.score.attack = fnode.parent.score.attack / fnode.children.get_size();
+    // fnode.parent.score.defence = fnode.parent.score.defence / fnode.children.get_size();
 };
 
 bool Search::fsearch_qualify(Node& node)
@@ -336,10 +336,6 @@ void Search::fsearch(Node& node, arrayvec<PieceType, 7>& fbag, int fdepth, int& 
         return;
     }
 
-    if (this->best.node < fnode.parent) {
-        this->best.node = fnode.parent;
-    }
-
     int fnode_best_child_index = 0;
     for (int i = 1; i < fnode.children.get_size(); ++i) {
         if (fnode.children[fnode_best_child_index] < fnode.children[i]) {
@@ -351,6 +347,26 @@ void Search::fsearch(Node& node, arrayvec<PieceType, 7>& fbag, int fdepth, int& 
     next_fbag.erase(fnode_best_child_index);
 
     this->fsearch(fnode.children[fnode_best_child_index], next_fbag, fdepth + 1, node_count);
+
+    // Calculate fnode's score
+    // fnode's score is the average of all the best possible children's score
+    // we store fnode's score at fnode.score.defence, fnode.score.attack = 0
+    fnode.parent.score = { 0, 0 };
+    for (int i = 0; i < fnode.children.get_size(); ++i) {
+        fnode.parent.score.defence += fnode.children[i].score.attack;
+        fnode.parent.score.defence += fnode.children[i].score.defence;
+    }
+    fnode.parent.score.defence = fnode.parent.score.defence / fnode.children.get_size();
+
+    // If fnode's score > input node's score then update input node's score
+    if (node < fnode.parent) {
+        node = fnode.parent;
+    }
+
+    // Update global best node
+    if (this->best.node < fnode.parent) {
+        this->best.node = fnode.parent;
+    }
 };
 
 void Search::search(int iteration, int& node, int& depth)
@@ -410,6 +426,7 @@ void Search::think(int& iter_num, int& layer_index, int& node_count)
         for (int i = 0; i < int(this->fsearch_bound.size()); ++i) {
             this->fsearch(this->fsearch_bound[i], this->state.bag, 1, node_count);
         }
+        // this->fsearch_bound.clear();
         return;
     }
 

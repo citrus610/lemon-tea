@@ -13,8 +13,7 @@ constexpr int SEARCH_PRUNE = 8;
 constexpr int SEARCH_TABLE_POWER_SIZE = 5;
 constexpr int SEARCH_TABLE_POWER[SEARCH_QUEUE_MAX] = { 0, 8, 9, 10, 11 };
 constexpr int SEARCH_FORECAST_TABLE_POWER = 12;
-constexpr int SEARCH_FORECAST_PERCENT = 50;
-constexpr int SEARCH_FORECAST_BOUND = 50;
+constexpr int SEARCH_FORECAST_BOUND = 100;
 
 struct SearchBest {
     Node node;
