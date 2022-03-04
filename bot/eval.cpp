@@ -133,6 +133,15 @@ void Evaluator::evaluate(Node& node, PieceType* queue, int queue_size, PieceType
         break;
     }
 
+    // Waste clear
+    if (node.action.lock == LOCK_CLEAR_1 ||
+        node.action.lock == LOCK_CLEAR_2 ||
+        node.action.lock == LOCK_CLEAR_3) {
+        if (node.state.ren == 1) {
+            node.score.attack += this->weight.attack.waste_clear;
+        }
+    }
+
     // Waste time
     if (node.action.softdrop &&
         node.action.lock != LOCK_TSPIN_1 &&
@@ -173,6 +182,16 @@ int Evaluator::well(Board& board, int column_height[10], int& well_position)
             well_position = i;
         }
     }
+    // for (int i = 1; i < 5; ++i) {
+    //     if (column_height[i] <= column_height[well_position]) {
+    //         well_position = i;
+    //     }
+    // }
+    // for (int i = 5; i < 10; ++i) {
+    //     if (column_height[i] < column_height[well_position]) {
+    //         well_position = i;
+    //     }
+    // }
 
     uint64_t mask = ~0b0;
     for (int i = 0; i < 10; ++i) {
@@ -191,7 +210,7 @@ void Evaluator::bumpiness(int column_height[10], int well_position, int result[3
         if (i == well_position) continue;
         int height_different = std::abs(column_height[pre_index] - column_height[i]);
         result[0] += height_different;
-        result[0] += height_different * height_different;
+        result[1] += height_different * height_different;
         result[2] += (height_different == 0);
         pre_index = i;
     }
